@@ -1,8 +1,9 @@
 //! Parse a markdown file with TOML frontmatter
 use thiserror::Error;
+
 type Frontmatter = toml::Value;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Eq, PartialEq)]
 pub enum Error {
     #[error("invalid frontmatter")]
     InvalidFrontmatter(String),
@@ -10,6 +11,7 @@ pub enum Error {
     ContentBeforeFrontmatter(String),
 }
 
+#[derive(Debug)]
 pub struct Page {
     pub frontmatter: Frontmatter,
     pub body: String,

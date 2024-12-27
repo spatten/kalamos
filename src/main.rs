@@ -2,6 +2,7 @@ use kalamos::markdown;
 
 fn main() {
     let md = r#"
+fooo
 +++
 title = "Hello, world!"
 draft = true
@@ -16,7 +17,7 @@ This is my first post.
             println!("body:\n======\n{}======\n", page.body);
         }
         Err(e) => {
-            println!("error: {}", e);
+            println!("error: {:?}", e);
         }
     }
 }

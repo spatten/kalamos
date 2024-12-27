@@ -38,7 +38,7 @@ use simple_test_case::test_case;
     "whitespace before frontmatter"
   )]
 #[test_case("# Hello, world!", ("", "<h1>Hello, world!</h1>\n"); "no frontmatter")]
-#[test_case("+++\ntitle = \"Hello, world!\"\n+++\n# Hello, world!\n+++\ncontinuing", ("title = \"Hello, world!\"", "<h1>Hello, world!</h1>\n<p>+++</p>\n<p>continuing</p>\n"); "multiple plus-plus-plus lines")]
+#[test_case("+++\ntitle = \"Hello, world!\"\n+++\n# Hello, world!\n+++\n\ncontinuing", ("title = \"Hello, world!\"", "<h1>Hello, world!</h1>\n<p>+++</p>\n<p>continuing</p>\n"); "multiple plus-plus-plus lines")]
 #[test]
 fn test_parse_with_valid_frontmatter(markdown: &str, expected: (&str, &str)) {
     let markdown::Page { frontmatter, body } = markdown::parse(markdown).expect("should parse");

@@ -16,7 +16,7 @@ pub struct Page {
 }
 
 pub fn parse(markdown: &str) -> Result<Page, Error> {
-    let mut sections = markdown.split("+++");
+    let mut sections = markdown.split("+++\n");
     // If there are less than 3 sections, there is no frontmatter,
     // so we just return the whole thing as the body.
     // If there are three or more sections, there is frontmatter,
@@ -28,10 +28,7 @@ pub fn parse(markdown: &str) -> Result<Page, Error> {
         // get rid of the first `+++` line
         let before = sections.next().expect("should have at least 3 sections");
         if !before.trim().is_empty() {
-            return Err(Error::ContentBeforeFrontmatter(format!(
-                "content before frontmatter: {}",
-                before
-            )));
+            return Err(Error::ContentBeforeFrontmatter(before.to_string()));
         }
         let frontmatter_content = sections.next().unwrap();
         toml::from_str(frontmatter_content).map_err(|e| Error::InvalidFrontmatter(e.to_string()))?

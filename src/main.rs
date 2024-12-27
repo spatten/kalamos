@@ -10,7 +10,7 @@ draft = true
 This is my first post.
 "#;
 
-    let (frontmatter, body) = markdown::parse(md).expect("should parse");
+    let markdown::Page { frontmatter, body } = markdown::parse(md).expect("should parse");
     println!("frontmatter: {:?}", frontmatter);
     println!("body: {}", body);
 }

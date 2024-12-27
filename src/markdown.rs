@@ -8,7 +8,12 @@ pub enum Error {
     InvalidFrontmatter(String),
 }
 
-pub fn parse(markdown: &str) -> Result<(Frontmatter, String), Error> {
+pub struct Page {
+    pub frontmatter: Frontmatter,
+    pub body: String,
+}
+
+pub fn parse(markdown: &str) -> Result<Page, Error> {
     let mut sections = markdown.split("+++");
     // If there are less than 3 sections, there is no frontmatter,
     // so we just return the whole thing as the body.
@@ -29,5 +34,8 @@ pub fn parse(markdown: &str) -> Result<(Frontmatter, String), Error> {
     let parser = pulldown_cmark::Parser::new(&body);
     let mut html = String::new();
     pulldown_cmark::html::push_html(&mut html, parser);
-    Ok((frontmatter, html))
+    Ok(Page {
+        frontmatter,
+        body: html,
+    })
 }

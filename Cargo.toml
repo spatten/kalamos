@@ -7,4 +7,5 @@ edition = "2021"
 maud = "0.26.0"
 pulldown-cmark = "0.12.2"
 simple_test_case = "1.2.0"
+thiserror = "2.0.9"
 toml = { version = "0.8.19", features = ["parse"] }

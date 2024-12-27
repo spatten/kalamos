@@ -25,7 +25,7 @@ use simple_test_case::test_case;
 #[test_case("+++\ntitle = \"Hello, world!\"\n+++\n# Hello, world!\n+++\ncontinuing", ("title = \"Hello, world!\"", "<h1>Hello, world!</h1>\n<p>+++</p>\n<p>continuing</p>\n"); "multiple plus-plus-plus lines")]
 #[test]
 fn test_parse(markdown: &str, expected: (&str, &str)) {
-    let (frontmatter, body) = markdown::parse(markdown);
+    let (frontmatter, body) = markdown::parse(markdown).expect("should parse");
     assert_eq!(frontmatter, toml::from_str(expected.0).unwrap());
     assert_eq!(body, expected.1);
 }

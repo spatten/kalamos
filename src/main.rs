@@ -20,6 +20,6 @@ fn main() {
     let pages =
         page::render_pages(&templates, &args.path, &args.output).expect("should load pages");
     for page in pages {
-        println!("{}", page);
+        println!("{:?}", page);
     }
 }

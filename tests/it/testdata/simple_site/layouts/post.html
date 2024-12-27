@@ -10,5 +10,10 @@
         {% if vars.name %}
         <p>Hello, {{ vars.name }}!</p>
         {% endif %}
+        <ul class="pages">
+          {% for page, title in pages %}
+            <li><a href="{{ page | safe}}">{{ title|safe }}</a></li>
+          {% endfor %}
+        </ul>
     </body>
 </html>

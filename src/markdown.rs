@@ -29,14 +29,10 @@ impl From<Page> for Context {
                 .get("template")
                 .unwrap_or(&toml::Value::String("default".to_string())),
         );
-        // context.insert("template", template);
-        // context.insert(
-        //     "draft",
-        //     &page.frontmatter["draft"].as_bool().unwrap_or(false),
-        // );
-        // let default_vars = toml::map::Map::new();
-        // let vars = page.frontmatter["vars"].as_table().unwrap_or(&default_vars);
-        // context.insert("vars", &vars);
+        let default_vars = toml::map::Map::new();
+        let default_vars = toml::Value::Table(default_vars);
+        let vars = page.frontmatter.get("vars").unwrap_or(&default_vars);
+        context.insert("vars", &vars);
         context
     }
 }

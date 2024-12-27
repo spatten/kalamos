@@ -1,5 +1,6 @@
 +++
 title = "My Home Page"
+template = "post"
 +++
 ## This is my home page
 

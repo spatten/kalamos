@@ -30,10 +30,17 @@ pub fn load_templates(path: &Path) -> Result<Tera, Error> {
     Tera::new(layout_path).map_err(Error::Tera)
 }
 
-pub fn render_pages(templates: &Tera, path: &Path) -> Result<Vec<String>, Error> {
-    let pages_path = path.join("pages");
-    let pages_path = pages_path.to_str().ok_or(Error::Path(path.to_path_buf()))?;
+pub fn render_pages(
+    templates: &Tera,
+    pages_dir: &Path,
+    output_dir: &Path,
+) -> Result<Vec<String>, Error> {
+    let pages_path = pages_dir.join("pages");
+    let pages_path = pages_path
+        .to_str()
+        .ok_or(Error::Path(pages_dir.to_path_buf()))?;
     // get all the md files in the pages directory and render them using the default layout
+    fs::create_dir_all(output_dir).map_err(Error::WriteFile)?;
     WalkDir::new(pages_path)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -48,7 +55,8 @@ pub fn render_pages(templates: &Tera, path: &Path) -> Result<Vec<String>, Error>
                 .and_then(|v| v.as_str())
                 .unwrap_or("default");
             let content = render_layout(templates, &format!("{template}.html"), &context)?;
-            let output_path = p.with_extension("html");
+            let rest_of_path = p.strip_prefix(pages_path).unwrap();
+            let output_path = output_dir.join(rest_of_path).with_extension("html");
             fs::write(&output_path, &content).map_err(Error::WriteFile)?;
             Ok(content)
         })

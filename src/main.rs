@@ -12,7 +12,7 @@ title = "Hello, world!"
 This is my first post.
 "#;
 
-    let (frontmatter, body) = markdown::parser::parse_markdown(md);
+    let (frontmatter, body) = markdown::parse(md);
     println!("frontmatter: {:?}", frontmatter);
     println!("body: {}", body);
 }

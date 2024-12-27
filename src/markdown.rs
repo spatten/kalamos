@@ -1,8 +1,7 @@
 //! Parse a markdown file with TOML frontmatter
-
 type Frontmatter = toml::Value;
 
-pub fn parse_markdown(markdown: &str) -> (Frontmatter, String) {
+pub fn parse(markdown: &str) -> (Frontmatter, String) {
     let mut sections = markdown.split("+++");
     let frontmatter: Frontmatter;
     let body: String;

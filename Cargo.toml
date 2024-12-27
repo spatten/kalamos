@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+clap = { version = "4.5.23", features = ["derive"] }
 maud = "0.26.0"
 pulldown-cmark = "0.12.2"
 simple_test_case = "1.2.0"
 tera = "1.20.0"
 thiserror = "2.0.9"
 toml = { version = "0.8.19", features = ["parse"] }
+walkdir = "2.5.0"

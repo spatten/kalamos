@@ -1,23 +1,19 @@
-use kalamos::markdown;
+use clap::Parser;
+use kalamos::page;
+use std::path::PathBuf;
+
+#[derive(Parser)]
+struct Args {
+    #[arg(short, long)]
+    path: PathBuf,
+}
 
 fn main() {
-    let md = r#"
-fooo
-+++
-title = "Hello, world!"
-draft = true
-+++
-# Hello, world!
-This is my first post.
-"#;
-    let res = markdown::parse(md);
-    match res {
-        Ok(page) => {
-            println!("frontmatter: {:?}", page.frontmatter);
-            println!("body:\n======\n{}======\n", page.body);
-        }
-        Err(e) => {
-            println!("error: {:?}", e);
-        }
+    let args = Args::parse();
+    let templates = page::load_templates(&args.path).expect("should load templates");
+    println!("{:?}", templates);
+    let pages = page::render_pages(&templates, &args.path).expect("should load pages");
+    for page in pages {
+        println!("{}", page);
     }
 }

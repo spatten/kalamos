@@ -40,7 +40,7 @@ pub fn render_pages(
     let pages_path = pages_path
         .to_str()
         .ok_or(Error::Path(pages_dir.to_path_buf()))?;
-    // get all the md files in the pages directory and render them using the default layout
+    // get all the md files in the pages directory and generate their contexts
     let pages = WalkDir::new(pages_path)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -62,11 +62,12 @@ pub fn render_pages(
         .map(|(path, context)| {
             (
                 path,
-                context.get("title").and_then(|t| t.as_str()).unwrap_or(""),
+                context.get("title").and_then(|t| t.as_str()).unwrap_or("aaa"),
             )
         })
         .collect::<HashMap<_, _>>();
-    // write the files
+
+    // render and write the files
     fs::create_dir_all(output_dir).map_err(Error::WriteFile)?;
     for (path, context) in &pages {
         let template = context
@@ -79,9 +80,6 @@ pub fn render_pages(
         fs::write(path, content).map_err(Error::WriteFile)?;
     }
     Ok(pages.into_iter().map(|(path, _)| path).collect())
-    // TODO: render into a map of paths to content
-    // This way, we can get the paths to the pages and supply that as a variable in the layout's context
-    // so we can use it in the navigation.
 }
 
 pub fn render_layout(templates: &Tera, layout: &str, context: &Context) -> Result<String, Error> {

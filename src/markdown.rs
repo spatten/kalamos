@@ -21,7 +21,13 @@ pub struct Page {
 impl From<Page> for Context {
     fn from(page: Page) -> Self {
         let mut context = Context::new();
-        context.insert("title", &page.frontmatter["title"].as_str().unwrap_or(""));
+        context.insert(
+            "title",
+            page.frontmatter
+                .get("title")
+                .and_then(|t| t.as_str())
+                .unwrap_or_default(),
+        );
         context.insert("body", &page.body);
         context.insert(
             "template",

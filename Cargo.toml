@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 maud = "0.26.0"
 pulldown-cmark = "0.12.2"
+simple_test_case = "1.2.0"
 toml = "0.8.19"

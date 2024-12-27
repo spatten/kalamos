@@ -4,10 +4,6 @@ fn main() {
     println!("Hello, world!");
 
     let md = r#"
-+++
-title = "Hello, world!"
-+++
-
 # Hello, world!
 This is my first post.
 "#;

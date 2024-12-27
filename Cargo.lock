@@ -51,6 +51,7 @@ version = "0.1.0"
 dependencies = [
  "maud",
  "pulldown-cmark",
+ "simple_test_case",
  "toml",
 ]
 
@@ -169,6 +170,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87607cb1398ed59d48732e575a4c28a7a8ebf2454b964fe3f224f2afc07909e1"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "simple_test_case"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d0649fa40b80dcacda1cabd018fd47b6b0c7fbbda6e1c3f658a6c4d5926500a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

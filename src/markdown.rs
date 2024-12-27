@@ -12,7 +12,6 @@ pub fn parse(markdown: &str) -> (Frontmatter, String) {
     if sections.clone().count() < 3 {
         frontmatter = toml::from_str("").unwrap();
         body = sections.map(|s| s.to_string()).collect::<String>();
-        return (frontmatter, body);
     } else {
         let _ = sections.next().unwrap();
         let frontmatter_content = sections.next().unwrap();

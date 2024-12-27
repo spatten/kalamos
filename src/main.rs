@@ -9,8 +9,14 @@ draft = true
 # Hello, world!
 This is my first post.
 "#;
-
-    let markdown::Page { frontmatter, body } = markdown::parse(md).expect("should parse");
-    println!("frontmatter: {:?}", frontmatter);
-    println!("body: {}", body);
+    let res = markdown::parse(md);
+    match res {
+        Ok(page) => {
+            println!("frontmatter: {:?}", page.frontmatter);
+            println!("body:\n======\n{}======\n", page.body);
+        }
+        Err(e) => {
+            println!("error: {}", e);
+        }
+    }
 }

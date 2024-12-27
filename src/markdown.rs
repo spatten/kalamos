@@ -16,7 +16,10 @@ pub fn parse(markdown: &str) -> (Frontmatter, String) {
         let _ = sections.next().unwrap();
         let frontmatter_content = sections.next().unwrap();
         frontmatter = toml::from_str(frontmatter_content).unwrap();
-        body = sections.map(|s| s.to_string()).collect::<String>();
+        body = sections
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
+            .join("\n+++\n");
     }
     let parser = pulldown_cmark::Parser::new(&body);
     let mut html = String::new();

@@ -11,7 +11,6 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let templates = page::load_templates(&args.path).expect("should load templates");
-    println!("{:?}", templates);
     let pages = page::render_pages(&templates, &args.path).expect("should load pages");
     for page in pages {
         println!("{}", page);

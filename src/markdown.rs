@@ -21,10 +21,22 @@ pub struct Page {
 impl From<Page> for Context {
     fn from(page: Page) -> Self {
         let mut context = Context::new();
-        // TODO: handle any random frontmatter elements
-        context.insert("title", &page.frontmatter["title"]);
+        context.insert("title", &page.frontmatter["title"].as_str().unwrap_or(""));
         context.insert("body", &page.body);
-        // context.insert("draft", &page.frontmatter["draft"]);
+        context.insert(
+            "template",
+            page.frontmatter
+                .get("template")
+                .unwrap_or(&toml::Value::String("default".to_string())),
+        );
+        // context.insert("template", template);
+        // context.insert(
+        //     "draft",
+        //     &page.frontmatter["draft"].as_bool().unwrap_or(false),
+        // );
+        // let default_vars = toml::map::Map::new();
+        // let vars = page.frontmatter["vars"].as_table().unwrap_or(&default_vars);
+        // context.insert("vars", &vars);
         context
     }
 }

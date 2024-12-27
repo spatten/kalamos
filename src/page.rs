@@ -17,6 +17,8 @@ pub enum Error {
     ReadFile(std::io::Error),
     #[error("markdown error")]
     Markdown(markdown::Error),
+    #[error("write error")]
+    WriteFile(std::io::Error),
 }
 /// pass in a path containing glob patterns for the pages
 /// Eg. load_templates("/path/to/project") would load all the templates in /path/to/project/layouts/*.html
@@ -29,20 +31,26 @@ pub fn load_templates(path: &Path) -> Result<Tera, Error> {
 }
 
 pub fn render_pages(templates: &Tera, path: &Path) -> Result<Vec<String>, Error> {
-    let pages_path = path.join("pages/*.md");
+    let pages_path = path.join("pages");
     let pages_path = pages_path.to_str().ok_or(Error::Path(path.to_path_buf()))?;
-    println!("pages_path: {}", pages_path);
+    // get all the md files in the pages directory and render them using the default layout
     WalkDir::new(pages_path)
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
+        .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|e| e == "md"))
         .map(|e| e.path().to_path_buf())
         .map(|p| -> Result<String, Error> {
-            println!("generating page {}", p.to_str().unwrap());
-            let content = fs::read_to_string(p).map_err(Error::ReadFile)?;
+            let content = fs::read_to_string(&p).map_err(Error::ReadFile)?;
             let page = markdown::parse(&content).map_err(Error::Markdown)?;
             let context = Context::from(page);
-            render_layout(templates, "default.html", &context)
+            let template = context
+                .get("template")
+                .and_then(|v| v.as_str())
+                .unwrap_or("default");
+            let content = render_layout(templates, &format!("{template}.html"), &context)?;
+            let output_path = p.with_extension("html");
+            fs::write(&output_path, &content).map_err(Error::WriteFile)?;
+            Ok(content)
         })
         .collect::<Result<Vec<_>, Error>>()
 }

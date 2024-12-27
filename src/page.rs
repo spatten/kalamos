@@ -59,12 +59,7 @@ pub fn render_pages(
     // generate the list of pages
     let pages_list = pages
         .iter()
-        .map(|(path, context)| {
-            (
-                path,
-                context.get("title").and_then(|t| t.as_str()).unwrap_or("aaa"),
-            )
-        })
+        .map(|(path, context)| (path, context.get("title")))
         .collect::<HashMap<_, _>>();
 
     // render and write the files

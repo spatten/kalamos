@@ -1,6 +1,6 @@
 //! Parse a markdown file with TOML frontmatter
+use tera::Context;
 use thiserror::Error;
-
 type Frontmatter = toml::Value;
 
 #[derive(Error, Debug, Eq, PartialEq)]
@@ -15,6 +15,18 @@ pub enum Error {
 pub struct Page {
     pub frontmatter: Frontmatter,
     pub body: String,
+}
+
+/// Convert a Page to a Tera Context
+impl From<Page> for Context {
+    fn from(page: Page) -> Self {
+        let mut context = Context::new();
+        // TODO: handle any random frontmatter elements
+        context.insert("title", &page.frontmatter["title"]);
+        context.insert("body", &page.body);
+        // context.insert("draft", &page.frontmatter["draft"]);
+        context
+    }
 }
 
 pub fn parse(markdown: &str) -> Result<Page, Error> {

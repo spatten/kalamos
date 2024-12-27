@@ -49,6 +49,8 @@ https://www.reddit.com/r/rust/comments/1fc2mic/best_templating_engine_for_rust/
 I'm going to go with Maud or hypertext (using the Maud syntax).
 
 The only real difference is, supposedly, that hypertext is more efficient with nested templates
+
+Actually, it looks like there's no way to pass a string into maude, so this does not work
 ### hypertext
 https://github.com/vidhanio/hypertext
 ### rsx
@@ -66,4 +68,5 @@ https://github.com/sunng87/handlebars-rust
 https://keats.github.io/tera/
 #### Askama
 https://github.com/rinja-rs/askama
+requires templates during compile time
 

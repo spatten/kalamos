@@ -1,9 +1,11 @@
 use kalamos::markdown;
 
 fn main() {
-    println!("Hello, world!");
-
     let md = r#"
++++
+title = "Hello, world!"
+draft = true
++++
 # Hello, world!
 This is my first post.
 "#;

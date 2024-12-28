@@ -22,6 +22,11 @@ pub struct Post {
     pub date: NaiveDate,
 }
 
+impl Post {
+    const DEFAULT_TEMPLATE: &str = "post";
+    const READ_DIRECTORY: &str = "posts";
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostFrontmatter {
     pub title: String,
@@ -52,10 +57,13 @@ impl Render for Post {
                 e.to_string()
             ))
         })?;
+
+        let mut template = res.template.unwrap_or(Post::DEFAULT_TEMPLATE.to_string());
+        template.push_str(".html");
         Ok(Box::new(Post {
             path: path.to_path_buf(),
             title: res.title,
-            template: res.template.unwrap_or("post".to_string()),
+            template,
             content: page.body,
             date: res.date,
         }))
@@ -63,11 +71,9 @@ impl Render for Post {
 
     fn render(&self, templates: &Tera, output_dir: &Path) -> Result<(), RenderError> {
         let output = templates
-            // TODO: use the template from the post
-            // .render(&self.template, &self.to_context())
-            .render("post.html", &self.to_context())
+            .render(&self.template, &self.to_context())
             .map_err(RenderError::Tera)?;
-        let relative_path = self.path.strip_prefix("posts").unwrap();
+        let relative_path = self.path.strip_prefix(Post::READ_DIRECTORY).unwrap();
         let output_path = output_dir
             .join(self.date.year().to_string())
             .join(self.date.month().to_string())
@@ -80,6 +86,7 @@ impl Render for Post {
                 std::io::ErrorKind::NotFound,
                 "no parent directory",
             )))?;
+
         fs::create_dir_all(parent).map_err(RenderError::CreateDir)?;
         println!("writing post to {:?}", output_path);
         fs::write(&output_path, output).map_err(RenderError::WriteFile)?;

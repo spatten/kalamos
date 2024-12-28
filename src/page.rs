@@ -25,6 +25,11 @@ pub struct PageFrontmatter {
     pub template: Option<String>,
 }
 
+impl Page {
+    const DEFAULT_TEMPLATE: &str = "default";
+    const READ_DIRECTORY: &str = "pages";
+}
+
 impl Render for Page {
     fn to_context(&self) -> Context {
         let mut context = Context::new();
@@ -39,7 +44,6 @@ impl Render for Page {
         let full_path = root_path.join(path);
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
         let page = markdown::parse(&content).map_err(RenderError::Markdown)?;
-        let default_template = "default".to_string();
         let frontmatter: PageFrontmatter = page.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
@@ -47,10 +51,14 @@ impl Render for Page {
                 e.to_string()
             ))
         })?;
+        let mut template = frontmatter
+            .template
+            .unwrap_or(Page::DEFAULT_TEMPLATE.to_string());
+        template.push_str(".html");
         let res = Self {
             path: path.to_path_buf(),
             title: frontmatter.title,
-            template: frontmatter.template.unwrap_or(default_template),
+            template,
             content: page.body,
         };
         Ok(Box::new(res))
@@ -58,11 +66,9 @@ impl Render for Page {
 
     fn render(&self, templates: &Tera, output_dir: &Path) -> Result<(), RenderError> {
         let output = templates
-            // TODO: use the template from the page
-            // .render(&self.template, &self.to_context())
-            .render("default.html", &self.to_context())
+            .render(&self.template, &self.to_context())
             .map_err(RenderError::Tera)?;
-        let relative_path = self.path.strip_prefix("pages").unwrap();
+        let relative_path = self.path.strip_prefix(Page::READ_DIRECTORY).unwrap();
         let output_path = output_dir.join(relative_path).with_extension("html");
 
         let parent = output_path

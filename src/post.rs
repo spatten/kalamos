@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -40,11 +40,6 @@ impl Render for Post {
         context
     }
 
-    // TODO: use the date to generate the output path
-    fn output_path(&self, output_dir: &Path) -> PathBuf {
-        output_dir.join(&self.path)
-    }
-
     fn from_file(root_path: &Path, path: &Path) -> Result<Box<Self>, RenderError> {
         println!("post::from_files for path {:?}", path);
         let full_path = root_path.join(path);
@@ -72,7 +67,13 @@ impl Render for Post {
             // .render(&self.template, &self.to_context())
             .render("post.html", &self.to_context())
             .map_err(RenderError::Tera)?;
-        let output_path = output_dir.join(&self.path).with_extension("html");
+        let relative_path = self.path.strip_prefix("posts").unwrap();
+        let output_path = output_dir
+            .join(self.date.year().to_string())
+            .join(self.date.month().to_string())
+            .join(self.date.day().to_string())
+            .join(relative_path)
+            .with_extension("html");
         let parent = output_path
             .parent()
             .ok_or(RenderError::CreateDir(std::io::Error::new(

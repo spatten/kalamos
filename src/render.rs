@@ -14,8 +14,6 @@ pub trait Render {
     fn to_context(&self) -> Context;
 
     fn render(&self, templates: &Tera, output_dir: &Path) -> Result<(), Error>;
-
-    fn output_path(&self, output_dir: &Path) -> PathBuf;
 }
 
 #[derive(Error, Debug)]

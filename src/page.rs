@@ -35,10 +35,6 @@ impl Render for Page {
         context
     }
 
-    fn output_path(&self, output_dir: &Path) -> PathBuf {
-        output_dir.join(&self.path)
-    }
-
     fn from_file(root_path: &Path, path: &Path) -> Result<Box<Self>, RenderError> {
         let full_path = root_path.join(path);
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
@@ -66,7 +62,8 @@ impl Render for Page {
             // .render(&self.template, &self.to_context())
             .render("default.html", &self.to_context())
             .map_err(RenderError::Tera)?;
-        let output_path = output_dir.join(&self.path).with_extension("html");
+        let relative_path = self.path.strip_prefix("pages").unwrap();
+        let output_path = output_dir.join(relative_path).with_extension("html");
 
         let parent = output_path
             .parent()

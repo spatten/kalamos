@@ -1,13 +1,13 @@
 # Kalamos: Static site generator in Rust
-
+## TODO Use pandoc to convert current textile to md
 ## DONE Name
 kalamos - https://en.wikipedia.org/wiki/Kalamos
 ## Syntax highlighting
 ## commands you need
-s new
-s serve <--- incrementally generate. Should be fast when you're editing
-s generate <--- build the whole thing from scratch
-s deploy (?) <--- deploy to S3 by default?
+kalamos new
+kalamos serve <--- incrementally generate. Should be fast when you're editing
+kalamos generate <--- build the whole thing from scratch
+kalamos deploy (?) <--- deploy to S3 by default?
 ## Configuration
 config.toml
 

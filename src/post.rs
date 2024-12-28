@@ -10,7 +10,8 @@ use crate::render::Render;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Post {
-    /// A relative path to the file, relative to the root of the site
+    /// path of the rendered file, relative to the root of the site
+    /// 2024/12/28/my-post.html
     pub path: PathBuf,
     /// the title of the page
     pub title: String,
@@ -20,7 +21,7 @@ pub struct Post {
     pub content: String,
     /// The date the post was published
     pub date: NaiveDate,
-    /// The url of the post
+    /// The url of the post. This is path, but with a leading /
     pub url: PathBuf,
 }
 
@@ -61,17 +62,19 @@ impl Render for Post {
         })?;
 
         let mut template = res.template.unwrap_or(Post::DEFAULT_TEMPLATE.to_string());
+        template.push_str(".html");
+
         let path = path.to_path_buf();
 
         let relative_path = path.strip_prefix(Post::READ_DIRECTORY).unwrap();
-        let url = PathBuf::from(res.date.year().to_string())
+        let output_path = PathBuf::from(res.date.year().to_string())
             .join(res.date.month().to_string())
-            .join(res.date.day().to_string())
             .join(relative_path)
             .with_extension("html");
-        template.push_str(".html");
+        let url = PathBuf::from("/").join(&output_path);
+
         Ok(Post {
-            path,
+            path: output_path,
             title: res.title,
             template,
             content: page.body,
@@ -91,7 +94,7 @@ impl Render for Post {
         let output = templates
             .render(&self.template, &context)
             .map_err(RenderError::Tera)?;
-        let output_path = output_dir.join(&self.url);
+        let output_path = output_dir.join(&self.path);
         let parent = output_path
             .parent()
             .ok_or(RenderError::CreateDir(std::io::Error::new(

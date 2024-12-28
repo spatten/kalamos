@@ -11,7 +11,7 @@
     </body>
         <ul class="posts"></ul>
           {% for post in posts %}
-            <li><a href="/{{ post.url | safe }}">{{ post.title | safe }}</a></li>
+            <li><a href="{{ post.url | safe }}">{{ post.title | safe }}</a></li>
           {% endfor %}
         </ul>
 </html>

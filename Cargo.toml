@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5.23", features = ["derive"] }
 maud = "0.26.0"
 pulldown-cmark = "0.12.2"
+serde = { version = "1.0", features = ["derive"] }
 simple_test_case = "1.2.0"
 tera = "1.20.0"
 thiserror = "2.0.9"

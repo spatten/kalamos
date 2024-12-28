@@ -1,12 +1,22 @@
-//! A page is a maud template and its markdown content
-use std::collections::HashMap;
-use std::fs;
+//! Render the whole static site.
 use std::path::{Path, PathBuf};
 use tera::{self, Context, Tera};
 use thiserror::Error;
 use walkdir::WalkDir;
 
 use crate::markdown;
+use crate::page::Page;
+use crate::post::Post;
+
+pub trait Render {
+    fn from_file(root_path: &Path, path: &Path) -> Result<Box<Self>, Error>;
+
+    fn to_context(&self) -> Context;
+
+    fn render(&self, templates: &Tera, output_dir: &Path) -> Result<(), Error>;
+
+    fn output_path(&self, output_dir: &Path) -> PathBuf;
+}
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -20,6 +30,14 @@ pub enum Error {
     Markdown(markdown::Error),
     #[error("write error")]
     WriteFile(std::io::Error),
+    #[error("missing field")]
+    MissingField(String),
+    #[error("parse date error")]
+    ParseDate(String, chrono::ParseError),
+    #[error("strip prefix error")]
+    StripPrefix(std::path::StripPrefixError),
+    #[error("create dir error")]
+    CreateDir(std::io::Error),
 }
 /// pass in a path containing glob patterns for the pages
 /// Eg. load_templates("/path/to/project") would load all the templates in /path/to/project/layouts/*.html
@@ -31,53 +49,49 @@ pub fn load_templates(path: &Path) -> Result<Tera, Error> {
     Tera::new(layout_path).map_err(Error::Tera)
 }
 
-pub fn pages(templates: &Tera, pages_dir: &Path, output_dir: &Path) -> Result<Vec<PathBuf>, Error> {
-    let pages_path = pages_dir.join("pages");
-    let pages_path = pages_path
-        .to_str()
-        .ok_or(Error::Path(pages_dir.to_path_buf()))?;
-    // get all the md files in the pages directory and generate their contexts
+pub fn render_all(templates: &Tera, root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
+    // get all the md files in the posts directory and create Posts from them
+    let posts_path = root_dir.join("posts");
+    let posts = WalkDir::new(posts_path)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|e| e == "md"))
+        .map(|e| -> Result<PathBuf, Error> {
+            let p = e.path().to_path_buf();
+            Ok(p.strip_prefix(root_dir)
+                .map_err(Error::StripPrefix)?
+                .to_path_buf())
+        })
+        .collect::<Result<Vec<_>, Error>>()?
+        .into_iter()
+        .map(|p| Post::from_file(root_dir, &p))
+        .collect::<Result<Vec<_>, Error>>()?;
+    println!("read posts");
+    for post in &posts {
+        post.render(templates, output_dir)?;
+    }
+    println!("rendered posts");
+
+    // get all the md files in the pages directory and create Pages from them
+    let pages_path = root_dir.join("pages");
     let pages = WalkDir::new(pages_path)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|e| e == "md"))
-        .map(|e| e.path().to_path_buf())
-        .map(|p| -> Result<(PathBuf, Context), Error> {
-            let content = fs::read_to_string(&p).map_err(Error::ReadFile)?;
-            let page = markdown::parse(&content).map_err(Error::Markdown)?;
-            let context = Context::from(page);
-            let rest_of_path = p.strip_prefix(pages_path).unwrap();
-            let output_path = output_dir.join(rest_of_path).with_extension("html");
-            Ok((output_path, context))
+        .map(|e| -> Result<PathBuf, Error> {
+            let p = e.path().to_path_buf();
+            Ok(p.strip_prefix(root_dir)
+                .map_err(Error::StripPrefix)?
+                .to_path_buf())
         })
+        .collect::<Result<Vec<_>, Error>>()?
+        .into_iter()
+        .map(|p| Page::from_file(root_dir, &p))
         .collect::<Result<Vec<_>, Error>>()?;
-
-    // generate the list of pages
-    // TODO: make this a Vec of some sort of struct that represents a page
-    // We need all of the things we need to render a list of pages and also the RSS feed.
-    // See ~/projects/scottpatten.ca/atom.xml for an example of what we need for the RSS feed.
-    // We need to have the path, title, url and date. We want to blow up if we don't have any of these.
-    // generate the url from the path?
-    let pages_list = pages
-        .iter()
-        .map(|(path, context)| (path, context.get("title")))
-        .collect::<HashMap<_, _>>();
-
-    // render and write the files
-    fs::create_dir_all(output_dir).map_err(Error::WriteFile)?;
-    for (path, context) in &pages {
-        let template = context
-            .get("template")
-            .and_then(|v| v.as_str())
-            .unwrap_or("default");
-        let mut context = context.clone();
-        context.insert("pages", &pages_list);
-        let content = layout(templates, &format!("{template}.html"), &context)?;
-        fs::write(path, content).map_err(Error::WriteFile)?;
+    println!("read pages");
+    for page in &pages {
+        page.render(templates, output_dir)?;
     }
-    Ok(pages.into_iter().map(|(path, _)| path).collect())
-}
-
-pub fn layout(templates: &Tera, layout: &str, context: &Context) -> Result<String, Error> {
-    templates.render(layout, context).map_err(Error::Tera)
+    println!("rendered pages");
+    Ok(())
 }

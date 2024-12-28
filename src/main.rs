@@ -17,8 +17,8 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let templates = render::load_templates(&args.path).expect("should load templates");
-    let pages = render::pages(&templates, &args.path, &args.output).expect("should load pages");
-    for page in pages {
-        println!("{:?}", page);
-    }
+    println!("input_dir: {:?}, output_dir: {:?}", args.path, args.output);
+    println!("templates: {:?}", templates);
+    render::render_all(&templates, &args.path, &args.output)
+        .expect("should render posts and pages");
 }

@@ -20,6 +20,8 @@ pub struct Post {
     pub content: String,
     /// The date the post was published
     pub date: NaiveDate,
+    /// The url of the post
+    pub url: PathBuf,
 }
 
 impl Post {
@@ -45,7 +47,7 @@ impl Render for Post {
         context
     }
 
-    fn from_file(root_path: &Path, path: &Path) -> Result<Box<Self>, RenderError> {
+    fn from_file(root_path: &Path, path: &Path) -> Result<Self, RenderError> {
         println!("post::from_files for path {:?}", path);
         let full_path = root_path.join(path);
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
@@ -59,27 +61,37 @@ impl Render for Post {
         })?;
 
         let mut template = res.template.unwrap_or(Post::DEFAULT_TEMPLATE.to_string());
+        let path = path.to_path_buf();
+
+        let relative_path = path.strip_prefix(Post::READ_DIRECTORY).unwrap();
+        let url = PathBuf::from(res.date.year().to_string())
+            .join(res.date.month().to_string())
+            .join(res.date.day().to_string())
+            .join(relative_path)
+            .with_extension("html");
         template.push_str(".html");
-        Ok(Box::new(Post {
-            path: path.to_path_buf(),
+        Ok(Post {
+            path,
             title: res.title,
             template,
             content: page.body,
             date: res.date,
-        }))
+            url,
+        })
     }
 
-    fn render(&self, templates: &Tera, output_dir: &Path) -> Result<(), RenderError> {
+    fn render(
+        &self,
+        templates: &Tera,
+        output_dir: &Path,
+        posts: &[Post],
+    ) -> Result<(), RenderError> {
+        let mut context = self.to_context();
+        context.insert("posts", &posts);
         let output = templates
-            .render(&self.template, &self.to_context())
+            .render(&self.template, &context)
             .map_err(RenderError::Tera)?;
-        let relative_path = self.path.strip_prefix(Post::READ_DIRECTORY).unwrap();
-        let output_path = output_dir
-            .join(self.date.year().to_string())
-            .join(self.date.month().to_string())
-            .join(self.date.day().to_string())
-            .join(relative_path)
-            .with_extension("html");
+        let output_path = output_dir.join(&self.url);
         let parent = output_path
             .parent()
             .ok_or(RenderError::CreateDir(std::io::Error::new(

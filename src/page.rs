@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use tera::{Context, Tera};
 
 use crate::markdown;
+use crate::post::Post;
 use crate::render::Error as RenderError;
 use crate::render::Render;
 
@@ -40,7 +41,7 @@ impl Render for Page {
         context
     }
 
-    fn from_file(root_path: &Path, path: &Path) -> Result<Box<Self>, RenderError> {
+    fn from_file(root_path: &Path, path: &Path) -> Result<Self, RenderError> {
         let full_path = root_path.join(path);
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
         let page = markdown::parse(&content).map_err(RenderError::Markdown)?;
@@ -61,12 +62,19 @@ impl Render for Page {
             template,
             content: page.body,
         };
-        Ok(Box::new(res))
+        Ok(res)
     }
 
-    fn render(&self, templates: &Tera, output_dir: &Path) -> Result<(), RenderError> {
+    fn render(
+        &self,
+        templates: &Tera,
+        output_dir: &Path,
+        posts: &[Post],
+    ) -> Result<(), RenderError> {
+        let mut context = self.to_context();
+        context.insert("posts", posts);
         let output = templates
-            .render(&self.template, &self.to_context())
+            .render(&self.template, &context)
             .map_err(RenderError::Tera)?;
         let relative_path = self.path.strip_prefix(Page::READ_DIRECTORY).unwrap();
         let output_path = output_dir.join(relative_path).with_extension("html");

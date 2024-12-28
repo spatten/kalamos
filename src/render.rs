@@ -8,12 +8,15 @@ use crate::markdown;
 use crate::page::Page;
 use crate::post::Post;
 
-pub trait Render {
-    fn from_file(root_path: &Path, path: &Path) -> Result<Box<Self>, Error>;
+pub trait Render
+where
+    Self: Sized,
+{
+    fn from_file(root_path: &Path, path: &Path) -> Result<Self, Error>;
 
     fn to_context(&self) -> Context;
 
-    fn render(&self, templates: &Tera, output_dir: &Path) -> Result<(), Error>;
+    fn render(&self, templates: &Tera, output_dir: &Path, posts: &[Post]) -> Result<(), Error>;
 }
 
 #[derive(Error, Debug)]
@@ -67,8 +70,9 @@ pub fn render_all(templates: &Tera, root_dir: &Path, output_dir: &Path) -> Resul
         .map(|p| Post::from_file(root_dir, &p))
         .collect::<Result<Vec<_>, Error>>()?;
     println!("read posts");
+
     for post in &posts {
-        post.render(templates, output_dir)?;
+        post.render(templates, output_dir, &posts)?;
     }
     println!("rendered posts");
 
@@ -90,7 +94,7 @@ pub fn render_all(templates: &Tera, root_dir: &Path, output_dir: &Path) -> Resul
         .collect::<Result<Vec<_>, Error>>()?;
     println!("read pages");
     for page in &pages {
-        page.render(templates, output_dir)?;
+        page.render(templates, output_dir, &posts)?;
     }
     println!("rendered pages");
     Ok(())

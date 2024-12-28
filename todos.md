@@ -1,6 +1,6 @@
 # Kalamos: Static site generator in Rust
 
-## Name
+## DONE Name
 kalamos - https://en.wikipedia.org/wiki/Kalamos
 ## Syntax highlighting
 ## commands you need
@@ -10,6 +10,10 @@ s generate <--- build the whole thing from scratch
 s deploy (?) <--- deploy to S3 by default?
 ## Configuration
 config.toml
+
+- site-wide variables
+- deploy method and config
+-
 ## Is this for blogs?
 Is there an opinion in the software that biases it towards a blog?
 ## directory structure
@@ -17,11 +21,30 @@ Is there a directory structure that we insist on?
 Can you just put plain HTML in?
 example from [aurora](https://github.com/capjamesg/aurora):
 pages
-  _layouts
+  layouts
   posts
   pages
   assets
 config.py
+
+Everything in layouts is a layout used to generate posts and pages.
+Everything in posts has a type of Post. Only .md files are supported. Default layout is post.
+Everything in pages is a type of Page. .md, .html, .xhtml and .xml files are supported. Default layout is default.
+Everything in assets is just copied to the assets folder in the generated site
+
+Differences between posts and pages:
+- default layout
+- post requires date, title, url
+- page requires title
+- post can have an excerpt
+- posts are sorted and returned in the posts variable, which is sent to all other pages and can be used in templates
+
+Post and Page implement the Render trait
+
+Render:
+- to_context (gets variables, sets default template if required)
+- render
+- path (has date in it for posts, just the relative path for pages)
 
 ## first steps
 generate a single page with maud template pulling in a post body

@@ -31,11 +31,7 @@ pub fn load_templates(path: &Path) -> Result<Tera, Error> {
     Tera::new(layout_path).map_err(Error::Tera)
 }
 
-pub fn render_pages(
-    templates: &Tera,
-    pages_dir: &Path,
-    output_dir: &Path,
-) -> Result<Vec<PathBuf>, Error> {
+pub fn pages(templates: &Tera, pages_dir: &Path, output_dir: &Path) -> Result<Vec<PathBuf>, Error> {
     let pages_path = pages_dir.join("pages");
     let pages_path = pages_path
         .to_str()
@@ -57,6 +53,11 @@ pub fn render_pages(
         .collect::<Result<Vec<_>, Error>>()?;
 
     // generate the list of pages
+    // TODO: make this a Vec of some sort of struct that represents a page
+    // We need all of the things we need to render a list of pages and also the RSS feed.
+    // See ~/projects/scottpatten.ca/atom.xml for an example of what we need for the RSS feed.
+    // We need to have the path, title, url and date. We want to blow up if we don't have any of these.
+    // generate the url from the path?
     let pages_list = pages
         .iter()
         .map(|(path, context)| (path, context.get("title")))
@@ -71,12 +72,12 @@ pub fn render_pages(
             .unwrap_or("default");
         let mut context = context.clone();
         context.insert("pages", &pages_list);
-        let content = render_layout(templates, &format!("{template}.html"), &context)?;
+        let content = layout(templates, &format!("{template}.html"), &context)?;
         fs::write(path, content).map_err(Error::WriteFile)?;
     }
     Ok(pages.into_iter().map(|(path, _)| path).collect())
 }
 
-pub fn render_layout(templates: &Tera, layout: &str, context: &Context) -> Result<String, Error> {
+pub fn layout(templates: &Tera, layout: &str, context: &Context) -> Result<String, Error> {
     templates.render(layout, context).map_err(Error::Tera)
 }

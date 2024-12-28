@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tera::{Context, Tera};
@@ -6,6 +7,7 @@ use crate::markdown;
 use crate::render::Error as RenderError;
 use crate::render::Render;
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Page {
     /// A relative path to the file, relative to the root of the site
     pub path: PathBuf,
@@ -15,6 +17,12 @@ pub struct Page {
     pub template: String,
     /// The content of the page
     pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PageFrontmatter {
+    pub title: String,
+    pub template: Option<String>,
 }
 
 impl Render for Page {
@@ -35,22 +43,21 @@ impl Render for Page {
         let full_path = root_path.join(path);
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
         let page = markdown::parse(&content).map_err(RenderError::Markdown)?;
-        let title = page
-            .frontmatter
-            .get("title")
-            .unwrap_or(&toml::Value::String("".to_string()))
-            .to_string();
-        let template = page
-            .frontmatter
-            .get("template")
-            .unwrap_or(&toml::Value::String("default".to_string()))
-            .to_string();
-        Ok(Box::new(Self {
+        let default_template = "default".to_string();
+        let frontmatter: PageFrontmatter = page.frontmatter.try_into().map_err(|e| {
+            RenderError::ParseFrontmatter(format!(
+                "frontmatter for {:?}: {:?}",
+                path,
+                e.to_string()
+            ))
+        })?;
+        let res = Self {
             path: path.to_path_buf(),
-            title,
-            template,
+            title: frontmatter.title,
+            template: frontmatter.template.unwrap_or(default_template),
             content: page.body,
-        }))
+        };
+        Ok(Box::new(res))
     }
 
     fn render(&self, templates: &Tera, output_dir: &Path) -> Result<(), RenderError> {
@@ -60,6 +67,14 @@ impl Render for Page {
             .render("default.html", &self.to_context())
             .map_err(RenderError::Tera)?;
         let output_path = output_dir.join(&self.path).with_extension("html");
+
+        let parent = output_path
+            .parent()
+            .ok_or(RenderError::CreateDir(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "no parent directory",
+            )))?;
+        fs::create_dir_all(parent).map_err(RenderError::CreateDir)?;
         println!("writing page to {:?}", output_path);
         fs::write(&output_path, output).map_err(RenderError::WriteFile)?;
         Ok(())

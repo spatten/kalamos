@@ -30,6 +30,8 @@ pub enum Error {
     Markdown(markdown::Error),
     #[error("write error")]
     WriteFile(std::io::Error),
+    #[error("parse frontmatter error")]
+    ParseFrontmatter(String),
     #[error("missing field")]
     MissingField(String),
     #[error("parse date error")]

@@ -1,4 +1,5 @@
 +++
+title = "My First Post"
 template = "post"
 date = "2024-12-27"
 +++

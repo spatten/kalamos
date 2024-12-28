@@ -1,15 +1,14 @@
 use chrono::NaiveDate;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tera::{Context, Tera};
-use toml::Value;
 
 use crate::markdown;
 use crate::render::Error as RenderError;
 use crate::render::Render;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Post {
     /// A relative path to the file, relative to the root of the site
     pub path: PathBuf,
@@ -20,6 +19,13 @@ pub struct Post {
     /// The content of the page
     pub content: String,
     /// The date the post was published
+    pub date: NaiveDate,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PostFrontmatter {
+    pub title: String,
+    pub template: Option<String>,
     pub date: NaiveDate,
 }
 
@@ -44,31 +50,19 @@ impl Render for Post {
         let full_path = root_path.join(path);
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
         let page = markdown::parse(&content).map_err(RenderError::Markdown)?;
-        let title = page
-            .frontmatter
-            .get("title")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_string();
-        let template = page
-            .frontmatter
-            .get("template")
-            .and_then(|v| v.as_str())
-            .unwrap_or("default")
-            .to_string();
-        let date = page
-            .frontmatter
-            .get("date")
-            .and_then(|v| v.as_str())
-            .ok_or(RenderError::MissingField("date".to_string()))?;
-        let date = NaiveDate::parse_from_str(date, "%Y-%m-%d")
-            .map_err(|e| RenderError::ParseDate(date.to_string(), e))?;
-        Ok(Box::new(Self {
+        let res: PostFrontmatter = page.frontmatter.try_into().map_err(|e| {
+            RenderError::ParseFrontmatter(format!(
+                "frontmatter for {:?}: {:?}",
+                path,
+                e.to_string()
+            ))
+        })?;
+        Ok(Box::new(Post {
             path: path.to_path_buf(),
-            title,
-            template,
+            title: res.title,
+            template: res.template.unwrap_or("post".to_string()),
             content: page.body,
-            date,
+            date: res.date,
         }))
     }
 

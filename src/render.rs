@@ -1,4 +1,5 @@
 //! Render the whole static site.
+use std::fs;
 use std::path::{Path, PathBuf};
 use tera::{self, Context, Tera};
 use thiserror::Error;
@@ -41,6 +42,8 @@ pub enum Error {
     StripPrefix(std::path::StripPrefixError),
     #[error("create dir error")]
     CreateDir(std::io::Error),
+    #[error("copy dir error")]
+    CopyDir(std::io::Error),
 }
 /// pass in a path containing glob patterns for the pages
 /// Eg. load_templates("/path/to/project") would load all the templates in /path/to/project/layouts/*.html
@@ -97,5 +100,19 @@ pub fn render_all(templates: &Tera, root_dir: &Path, output_dir: &Path) -> Resul
         page.render(templates, output_dir, &posts)?;
     }
     println!("rendered pages");
+
+    // copy static files from assets directory
+    let assets_path = root_dir.join("assets");
+    WalkDir::new(assets_path)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .for_each(|e| {
+            let p = e.path();
+            let output_path = output_dir.join(p.strip_prefix(root_dir).unwrap());
+            let output_dir = output_path.parent().unwrap();
+            fs::create_dir_all(output_dir).unwrap();
+            fs::copy(p, output_path).unwrap();
+        });
     Ok(())
 }

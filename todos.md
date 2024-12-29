@@ -1,5 +1,17 @@
 
 # Kalamos: Static site generator in Rust
+## Getting posts working
+
+```
+{% for post in posts %}
+<h2><a href='{{ post.url }}'>{{ post.title }}</a></h2>
+<p class='published-date'>published {{ post.date }}</p>
+{{ post.body }}
+
+<a href='{{ post.url }}'>Read More</a>
+<hr />
+{% endfor %}
+```
 ## TODO Makefile
 ### install
 cargo install --path .

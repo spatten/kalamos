@@ -43,7 +43,7 @@ impl From<Page> for Context {
     }
 }
 
-pub fn parse(markdown: &str) -> Result<Page, Error> {
+pub fn extract_frontmatter(markdown: &str) -> Result<(Frontmatter, String), Error> {
     let mut sections = markdown.split("+++\n");
     // If there are less than 3 sections, there is no frontmatter,
     // so we just return the whole thing as the body.
@@ -65,6 +65,11 @@ pub fn parse(markdown: &str) -> Result<Page, Error> {
         .map(|s| s.to_string())
         .collect::<Vec<_>>()
         .join("\n+++\n");
+    Ok((frontmatter, body))
+}
+
+pub fn parse(markdown: &str) -> Result<Page, Error> {
+    let (frontmatter, body) = extract_frontmatter(markdown)?;
     let parser = pulldown_cmark::Parser::new(&body);
     let mut html = String::new();
     pulldown_cmark::html::push_html(&mut html, parser);

@@ -46,9 +46,46 @@ impl Render for Page {
 
     fn from_file(root_path: &Path, path: &Path) -> Result<Self, RenderError> {
         let full_path = root_path.join(path);
+
+        let extension = path
+            .extension()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default();
+        let slug = path
+            .with_extension("")
+            .file_name()
+            .ok_or(RenderError::Path(path.to_path_buf()))?
+            .to_str()
+            .ok_or(RenderError::Path(path.to_path_buf()))?
+            .to_string();
+        if extension != "md" {
+            let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
+            let (frontmatter, body) =
+                markdown::extract_frontmatter(&content).map_err(RenderError::Markdown)?;
+
+            let frontmatter: PageFrontmatter = frontmatter.try_into().map_err(|e| {
+                RenderError::ParseFrontmatter(format!(
+                    "frontmatter for {:?}: {:?}",
+                    path,
+                    e.to_string()
+                ))
+            })?;
+
+            let mut template = Page::DEFAULT_TEMPLATE.to_string();
+            template.push_str(".html");
+            return Ok(Self {
+                path: path.to_path_buf(),
+                title: frontmatter.title,
+                template,
+                content: body,
+                slug: slug.clone(),
+            });
+        }
+
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
-        let page = markdown::parse(&content).map_err(RenderError::Markdown)?;
-        let frontmatter: PageFrontmatter = page.frontmatter.try_into().map_err(|e| {
+        let parsed = markdown::parse(&content).map_err(RenderError::Markdown)?;
+        let frontmatter: PageFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
                 path,
@@ -60,18 +97,11 @@ impl Render for Page {
             .unwrap_or(Page::DEFAULT_TEMPLATE.to_string());
         template.push_str(".html");
 
-        let slug = path
-            .with_extension("")
-            .file_name()
-            .ok_or(RenderError::Path(path.to_path_buf()))?
-            .to_str()
-            .ok_or(RenderError::Path(path.to_path_buf()))?
-            .to_string();
         let res = Self {
             path: path.to_path_buf(),
             title: frontmatter.title,
             template,
-            content: page.body,
+            content: parsed.body,
             slug,
         };
         Ok(res)
@@ -85,9 +115,33 @@ impl Render for Page {
     ) -> Result<(), RenderError> {
         let mut context = self.to_context();
         context.insert("posts", posts);
-        let output = templates
-            .render(&self.template, &context)
-            .map_err(RenderError::Tera)?;
+
+        let extension = self
+            .path
+            .extension()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default();
+        let output = if extension == "md" {
+            templates
+                .render(&self.template, &context)
+                .map_err(RenderError::Tera)?
+        } else {
+            let template = self
+                .path
+                .file_name()
+                .ok_or(RenderError::Path(self.path.to_path_buf()))?
+                .to_str()
+                .ok_or(RenderError::Path(self.path.to_path_buf()))?;
+            let mut templates = templates.clone();
+            templates
+                .add_raw_template(template, &self.content)
+                .map_err(RenderError::Tera)?;
+            templates
+                .render(template, &context)
+                .map_err(RenderError::Tera)?
+        };
+
         let relative_path = self.path.strip_prefix(Page::READ_DIRECTORY).unwrap();
         let output_path = output_dir.join(relative_path).with_extension("html");
 

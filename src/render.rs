@@ -86,7 +86,14 @@ pub fn render_all(templates: &Tera, root_dir: &Path, output_dir: &Path) -> Resul
     let pages = WalkDir::new(pages_path)
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|e| e == "md"))
+        // include all .md, .html and .xml files
+        .filter(|e| {
+            e.file_type().is_file()
+                && (e
+                    .path()
+                    .extension()
+                    .is_some_and(|e| e == "md" || e == "html" || e == "xml"))
+        })
         .map(|e| -> Result<PathBuf, Error> {
             let p = e.path().to_path_buf();
             Ok(p.strip_prefix(root_dir)

@@ -16,9 +16,10 @@ struct Args {
 ///  cargo run -- --path tests/it/testdata/simple_site --output /tmp/output
 fn main() {
     let args = Args::parse();
-    let templates = render::load_templates(&args.path).expect("should load templates");
+    let templates = render::load_templates(&args.path)
+        .unwrap_or_else(|e| panic!("should load templates: {}", e));
     println!("input_dir: {:?}, output_dir: {:?}", args.path, args.output);
     println!("templates: {:?}", templates);
     render::render_all(&templates, &args.path, &args.output)
-        .expect("should render posts and pages");
+        .unwrap_or_else(|e| panic!("Error rendering posts and pages: {}", e));
 }

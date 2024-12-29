@@ -36,7 +36,9 @@ pub enum Error {
     ParseFrontmatter(String),
     #[error("missing field")]
     MissingField(String),
-    #[error("parse date error")]
+    #[error("extract date from file name: {0}. File name format should be YYYY-MM-DD-slug.md")]
+    ExtractDate(String),
+    #[error("parse date error: {0}")]
     ParseDate(String, chrono::ParseError),
     #[error("strip prefix error")]
     StripPrefix(std::path::StripPrefixError),

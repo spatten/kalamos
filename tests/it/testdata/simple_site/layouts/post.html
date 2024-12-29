@@ -3,8 +3,9 @@
         <title>Post: {{ title }}</title>
         <link rel="stylesheet" href="/assets/style.css">
     </head>
-    <body>
+    <body class="post">
         <h1>Post: {{ title }}</h1>
+        <p>Published on {{ date }}</p>
         <div class="post">
           {{ body | safe }}
         </div>

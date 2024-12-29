@@ -28,13 +28,37 @@ pub struct Post {
 impl Post {
     const DEFAULT_TEMPLATE: &str = "post";
     const READ_DIRECTORY: &str = "posts";
+
+    /// Extracts the date and slug from a file name
+    /// The file name must be in the format YYYY-MM-DD-slug.md
+    fn extract_date_and_slug(path: &Path) -> Result<(NaiveDate, String), RenderError> {
+        let file_name = path
+            .file_name()
+            .ok_or(RenderError::ExtractDate(path.to_string_lossy().to_string()))?
+            .to_str()
+            .ok_or(RenderError::ExtractDate(path.to_string_lossy().to_string()))?;
+        let parts = file_name.split("-").collect::<Vec<&str>>();
+        if parts.len() < 4 {
+            return Err(RenderError::ExtractDate(path.to_string_lossy().to_string()));
+        }
+        let date = parts
+            .clone()
+            .into_iter()
+            .take(3)
+            .collect::<Vec<_>>()
+            .join("-");
+        let slug = parts.into_iter().skip(3).collect::<Vec<_>>().join("-");
+        let date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
+            .map_err(|e| RenderError::ParseDate(path.to_string_lossy().to_string(), e))?;
+
+        Ok((date, slug))
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostFrontmatter {
     pub title: String,
     pub template: Option<String>,
-    pub date: NaiveDate,
 }
 
 impl Render for Post {
@@ -67,9 +91,10 @@ impl Render for Post {
         let path = path.to_path_buf();
 
         let relative_path = path.strip_prefix(Post::READ_DIRECTORY).unwrap();
-        let output_path = PathBuf::from(res.date.year().to_string())
-            .join(res.date.month().to_string())
-            .join(relative_path)
+        let (date, slug) = Post::extract_date_and_slug(relative_path)?;
+        let output_path = PathBuf::from(date.year().to_string())
+            .join(date.month().to_string())
+            .join(slug)
             .with_extension("html");
         let url = PathBuf::from("/").join(&output_path);
 
@@ -78,7 +103,7 @@ impl Render for Post {
             title: res.title,
             template,
             content: page.body,
-            date: res.date,
+            date,
             url,
         })
     }

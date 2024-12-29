@@ -12,14 +12,14 @@ pub enum Error {
 }
 
 #[derive(Debug)]
-pub struct Page {
+pub struct FrontmatterAndBody {
     pub frontmatter: Frontmatter,
     pub body: String,
 }
 
-/// Convert a Page to a Tera Context
-impl From<Page> for Context {
-    fn from(page: Page) -> Self {
+/// Convert to a Tera Context
+impl From<FrontmatterAndBody> for Context {
+    fn from(page: FrontmatterAndBody) -> Self {
         let mut context = Context::new();
         context.insert(
             "title",
@@ -68,12 +68,12 @@ pub fn extract_frontmatter(markdown: &str) -> Result<(Frontmatter, String), Erro
     Ok((frontmatter, body))
 }
 
-pub fn parse(markdown: &str) -> Result<Page, Error> {
+pub fn parse_markdown(markdown: &str) -> Result<FrontmatterAndBody, Error> {
     let (frontmatter, body) = extract_frontmatter(markdown)?;
     let parser = pulldown_cmark::Parser::new(&body);
     let mut html = String::new();
     pulldown_cmark::html::push_html(&mut html, parser);
-    Ok(Page {
+    Ok(FrontmatterAndBody {
         frontmatter,
         body: html,
     })

@@ -79,7 +79,7 @@ impl Render for Post {
         println!("post::from_files for path {:?}", path);
         let full_path = root_path.join(path);
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
-        let page = markdown::parse(&content).map_err(RenderError::Markdown)?;
+        let page = markdown::parse_markdown(&content).map_err(RenderError::Markdown)?;
         let res: PostFrontmatter = page.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",

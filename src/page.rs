@@ -86,7 +86,7 @@ impl Render for Page {
         }
 
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
-        let parsed = markdown::parse(&content).map_err(RenderError::Markdown)?;
+        let parsed = markdown::parse_markdown(&content).map_err(RenderError::Markdown)?;
         let frontmatter: PageFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",

@@ -1,3 +1,4 @@
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -41,6 +42,7 @@ impl Render for Page {
         context.insert("url", &self.path);
         context.insert("body", &self.content);
         context.insert("slug", &self.slug);
+        context.insert("current_date", &Utc::now().date_naive());
         context
     }
 
@@ -143,7 +145,11 @@ impl Render for Page {
         };
 
         let relative_path = self.path.strip_prefix(Page::READ_DIRECTORY).unwrap();
-        let output_path = output_dir.join(relative_path).with_extension("html");
+        let output_path = if extension == "md" {
+            output_dir.join(relative_path).with_extension("html")
+        } else {
+            output_dir.join(relative_path)
+        };
 
         let parent = output_path
             .parent()

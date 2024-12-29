@@ -57,7 +57,8 @@ pub fn load_templates(path: &Path) -> Result<Tera, Error> {
     Tera::new(layout_path).map_err(Error::Tera)
 }
 
-pub fn render_all(templates: &Tera, root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
+pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
+    let templates = load_templates(root_dir)?;
     // get all the md files in the posts directory and create Posts from them
     let posts_path = root_dir.join("posts");
     let posts = WalkDir::new(posts_path)
@@ -77,7 +78,7 @@ pub fn render_all(templates: &Tera, root_dir: &Path, output_dir: &Path) -> Resul
     println!("read posts");
 
     for post in &posts {
-        post.render(templates, output_dir, &posts)?;
+        post.render(&templates, output_dir, &posts)?;
     }
     println!("rendered posts");
 
@@ -106,7 +107,7 @@ pub fn render_all(templates: &Tera, root_dir: &Path, output_dir: &Path) -> Resul
         .collect::<Result<Vec<_>, Error>>()?;
     println!("read pages");
     for page in &pages {
-        page.render(templates, output_dir, &posts)?;
+        page.render(&templates, output_dir, &posts)?;
     }
     println!("rendered pages");
 

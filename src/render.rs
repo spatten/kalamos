@@ -5,8 +5,8 @@ use tera::{self, Context, Tera};
 use thiserror::Error;
 use walkdir::WalkDir;
 
-use crate::markdown;
 use crate::page::Page;
+use crate::parser;
 use crate::post::Post;
 
 pub trait Render
@@ -29,7 +29,7 @@ pub enum Error {
     #[error("read error: {0}")]
     ReadFile(std::io::Error),
     #[error("markdown error: {0}")]
-    Markdown(markdown::Error),
+    Markdown(parser::Error),
     #[error("write error: {0}")]
     WriteFile(std::io::Error),
     #[error("parse frontmatter error: {0}")]

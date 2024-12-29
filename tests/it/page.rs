@@ -29,9 +29,9 @@ fn test_page_from_content(layout: &str, content: &str, expected: &str) {
     tera.add_raw_template("hello.html", layout)
         .expect("should be able to add template");
 
-    let markdown::FrontmatterAndBody { frontmatter, body } =
-        markdown::parse_markdown(content).expect("should parse");
-    let context = Context::from(markdown::FrontmatterAndBody { frontmatter, body });
+    let parser::FrontmatterAndBody { frontmatter, body } =
+        parser::parse_markdown(content).expect("should parse");
+    let context = Context::from(parser::FrontmatterAndBody { frontmatter, body });
     let rendered = page::render_layout(&tera, "hello.html", &context).expect("should render");
     assert_eq!(rendered, expected);
 }

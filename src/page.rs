@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tera::{Context, Tera};
 
-use crate::markdown;
+use crate::parser;
 use crate::post::Post;
 use crate::render::Error as RenderError;
 use crate::render::Render;
@@ -64,7 +64,7 @@ impl Render for Page {
         if extension != "md" {
             let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
             let (frontmatter, body) =
-                markdown::extract_frontmatter(&content).map_err(RenderError::Markdown)?;
+                parser::extract_frontmatter(&content).map_err(RenderError::Markdown)?;
 
             let frontmatter: PageFrontmatter = frontmatter.try_into().map_err(|e| {
                 RenderError::ParseFrontmatter(format!(
@@ -86,7 +86,7 @@ impl Render for Page {
         }
 
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
-        let parsed = markdown::parse_markdown(&content).map_err(RenderError::Markdown)?;
+        let parsed = parser::parse_markdown(&content).map_err(RenderError::Markdown)?;
         let frontmatter: PageFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",

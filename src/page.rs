@@ -18,6 +18,8 @@ pub struct Page {
     pub template: String,
     /// The content of the page
     pub content: String,
+    /// The page slug
+    pub slug: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,6 +40,7 @@ impl Render for Page {
         context.insert("path", &self.path);
         context.insert("url", &self.path);
         context.insert("body", &self.content);
+        context.insert("slug", &self.slug);
         context
     }
 
@@ -56,11 +59,20 @@ impl Render for Page {
             .template
             .unwrap_or(Page::DEFAULT_TEMPLATE.to_string());
         template.push_str(".html");
+
+        let slug = path
+            .with_extension("")
+            .file_name()
+            .ok_or(RenderError::Path(path.to_path_buf()))?
+            .to_str()
+            .ok_or(RenderError::Path(path.to_path_buf()))?
+            .to_string();
         let res = Self {
             path: path.to_path_buf(),
             title: frontmatter.title,
             template,
             content: page.body,
+            slug,
         };
         Ok(res)
     }

@@ -23,6 +23,8 @@ pub struct Post {
     pub date: NaiveDate,
     /// The url of the post. This is path, but with a leading /
     pub url: PathBuf,
+    /// The slug of the post
+    pub slug: String,
 }
 
 impl Post {
@@ -69,6 +71,7 @@ impl Render for Post {
         context.insert("url", &self.path);
         context.insert("date", &self.date);
         context.insert("body", &self.content);
+        context.insert("slug", &self.slug);
         context
     }
 
@@ -94,7 +97,7 @@ impl Render for Post {
         let (date, slug) = Post::extract_date_and_slug(relative_path)?;
         let output_path = PathBuf::from(date.year().to_string())
             .join(date.month().to_string())
-            .join(slug)
+            .join(&slug)
             .with_extension("html");
         let url = PathBuf::from("/").join(&output_path);
 
@@ -105,6 +108,7 @@ impl Render for Post {
             content: page.body,
             date,
             url,
+            slug,
         })
     }
 

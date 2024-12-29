@@ -1,4 +1,8 @@
+
 # Kalamos: Static site generator in Rust
+## TODO Makefile
+### install
+cargo install --path .
 ## TODO Use pandoc to convert current textile to md
 ## DONE Name
 kalamos - https://en.wikipedia.org/wiki/Kalamos

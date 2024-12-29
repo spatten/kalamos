@@ -22,29 +22,29 @@ where
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("tera error")]
+    #[error("tera error: {0}")]
     Tera(tera::Error),
-    #[error("path error")]
+    #[error("path error: {0}")]
     Path(PathBuf),
-    #[error("read error")]
+    #[error("read error: {0}")]
     ReadFile(std::io::Error),
-    #[error("markdown error")]
+    #[error("markdown error: {0}")]
     Markdown(markdown::Error),
-    #[error("write error")]
+    #[error("write error: {0}")]
     WriteFile(std::io::Error),
-    #[error("parse frontmatter error")]
+    #[error("parse frontmatter error: {0}")]
     ParseFrontmatter(String),
-    #[error("missing field")]
+    #[error("missing field: {0}")]
     MissingField(String),
     #[error("extract date from file name: {0}. File name format should be YYYY-MM-DD-slug.md")]
     ExtractDate(String),
     #[error("parse date error: {0}")]
     ParseDate(String, chrono::ParseError),
-    #[error("strip prefix error")]
+    #[error("strip prefix error: {0}")]
     StripPrefix(std::path::StripPrefixError),
-    #[error("create dir error")]
+    #[error("create dir error: {0}")]
     CreateDir(std::io::Error),
-    #[error("copy dir error")]
+    #[error("copy dir error: {0}")]
     CopyDir(std::io::Error),
 }
 /// pass in a path containing glob patterns for the pages

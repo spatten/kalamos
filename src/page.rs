@@ -36,8 +36,12 @@ impl Page {
     pub const READ_DIRECTORY: &str = "pages";
     pub const VALID_EXTENSIONS: [&str; 4] = ["md", "markdown", "html", "xml"];
 
+    fn extension_is_markdown(extension: &str) -> bool {
+        extension == "md" || extension == "markdown"
+    }
+
     fn is_markdown(&self) -> bool {
-        self.extension == "md" || self.extension == "markdown"
+        Self::extension_is_markdown(&self.extension)
     }
 }
 
@@ -70,7 +74,7 @@ impl Render for Page {
             .to_str()
             .ok_or(RenderError::Path(path.to_path_buf()))?
             .to_string();
-        if extension != "md" && extension != "markdown" {
+        if !Self::extension_is_markdown(extension) {
             let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
             let (frontmatter, body) =
                 parser::extract_frontmatter(&content).map_err(RenderError::Markdown)?;

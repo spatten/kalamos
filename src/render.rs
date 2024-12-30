@@ -81,6 +81,9 @@ pub fn load_templates(path: &Path) -> Result<Tera, Error> {
 pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
     let templates = load_templates(root_dir)?;
     // get all the md files in the posts directory and create Posts from them
+    // We need the posts as a variable to pass to the render function for posts and pages.
+    // It can be used, for example, to get a list of all the posts to pass to the RSS feed
+    // or to get a list of posts for a sidebar or an archives page.
     let posts = Post::read_from_directory(root_dir)?;
     println!("read posts");
 

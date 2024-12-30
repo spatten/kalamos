@@ -14,3 +14,9 @@ tera = "1.20.0"
 thiserror = "2.0.9"
 toml = { version = "0.8.19", features = ["parse"] }
 walkdir = "2.5.0"
+
+[dev-dependencies]
+binaryornot = "1.0.0"
+insta = { version = "1.41.1", features = ["yaml"] }
+serde_yaml = "0.9.34"
+sha2 = "0.10.8"

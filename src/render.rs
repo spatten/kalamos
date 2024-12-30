@@ -18,6 +18,26 @@ where
     fn to_context(&self) -> Context;
 
     fn render(&self, templates: &Tera, output_dir: &Path, posts: &[Post]) -> Result<(), Error>;
+
+    fn read_directory() -> String;
+
+    fn read_from_directory(root_dir: &Path) -> Result<Vec<Self>, Error> {
+        let posts_path = root_dir.join(Self::read_directory());
+        WalkDir::new(posts_path)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|e| e == "md"))
+            .map(|e| -> Result<PathBuf, Error> {
+                let p = e.path().to_path_buf();
+                Ok(p.strip_prefix(root_dir)
+                    .map_err(Error::StripPrefix)?
+                    .to_path_buf())
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .into_iter()
+            .map(|p| Self::from_file(root_dir, &p))
+            .collect::<Result<Vec<_>, Error>>()
+    }
 }
 
 #[derive(Error, Debug)]
@@ -60,21 +80,7 @@ pub fn load_templates(path: &Path) -> Result<Tera, Error> {
 pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
     let templates = load_templates(root_dir)?;
     // get all the md files in the posts directory and create Posts from them
-    let posts_path = root_dir.join("posts");
-    let posts = WalkDir::new(posts_path)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|e| e == "md"))
-        .map(|e| -> Result<PathBuf, Error> {
-            let p = e.path().to_path_buf();
-            Ok(p.strip_prefix(root_dir)
-                .map_err(Error::StripPrefix)?
-                .to_path_buf())
-        })
-        .collect::<Result<Vec<_>, Error>>()?
-        .into_iter()
-        .map(|p| Post::from_file(root_dir, &p))
-        .collect::<Result<Vec<_>, Error>>()?;
+    let posts = Post::read_from_directory(root_dir)?;
     println!("read posts");
 
     for post in &posts {
@@ -83,28 +89,7 @@ pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
     println!("rendered posts");
 
     // get all the md files in the pages directory and create Pages from them
-    let pages_path = root_dir.join("pages");
-    let pages = WalkDir::new(pages_path)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        // include all .md, .html and .xml files
-        .filter(|e| {
-            e.file_type().is_file()
-                && (e
-                    .path()
-                    .extension()
-                    .is_some_and(|e| e == "md" || e == "html" || e == "xml"))
-        })
-        .map(|e| -> Result<PathBuf, Error> {
-            let p = e.path().to_path_buf();
-            Ok(p.strip_prefix(root_dir)
-                .map_err(Error::StripPrefix)?
-                .to_path_buf())
-        })
-        .collect::<Result<Vec<_>, Error>>()?
-        .into_iter()
-        .map(|p| Page::from_file(root_dir, &p))
-        .collect::<Result<Vec<_>, Error>>()?;
+    let pages = Page::read_from_directory(root_dir)?;
     println!("read pages");
     for page in &pages {
         page.render(&templates, output_dir, &posts)?;

@@ -28,8 +28,8 @@ pub struct Post {
 }
 
 impl Post {
-    const DEFAULT_TEMPLATE: &str = "post";
-    const READ_DIRECTORY: &str = "posts";
+    pub const DEFAULT_TEMPLATE: &str = "post";
+    pub const READ_DIRECTORY: &str = "posts";
 
     /// Extracts the date and slug from a file name
     /// The file name must be in the format YYYY-MM-DD-slug.md
@@ -64,6 +64,10 @@ pub struct PostFrontmatter {
 }
 
 impl Render for Post {
+    fn read_directory() -> String {
+        Post::READ_DIRECTORY.to_string()
+    }
+
     fn to_context(&self) -> Context {
         let mut context = Context::new();
         context.insert("title", &self.title);

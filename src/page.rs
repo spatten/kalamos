@@ -30,8 +30,8 @@ pub struct PageFrontmatter {
 }
 
 impl Page {
-    const DEFAULT_TEMPLATE: &str = "default";
-    const READ_DIRECTORY: &str = "pages";
+    pub const DEFAULT_TEMPLATE: &str = "default";
+    pub const READ_DIRECTORY: &str = "pages";
 }
 
 impl Render for Page {
@@ -144,7 +144,7 @@ impl Render for Page {
                 .map_err(RenderError::Tera)?
         };
 
-        let relative_path = self.path.strip_prefix(Page::READ_DIRECTORY).unwrap();
+        let relative_path = self.path.strip_prefix(Self::read_directory()).unwrap();
         let output_path = if extension == "md" {
             output_dir.join(relative_path).with_extension("html")
         } else {
@@ -161,5 +161,9 @@ impl Render for Page {
         println!("writing page to {:?}", output_path);
         fs::write(&output_path, output).map_err(RenderError::WriteFile)?;
         Ok(())
+    }
+
+    fn read_directory() -> String {
+        Page::READ_DIRECTORY.to_string()
     }
 }

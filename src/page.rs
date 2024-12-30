@@ -43,6 +43,81 @@ impl Page {
     fn is_markdown(&self) -> bool {
         Self::extension_is_markdown(&self.extension)
     }
+
+    fn from_content(path: &Path, extension: &str, content: &str) -> Result<Self, RenderError> {
+        let slug = path
+            .with_extension("")
+            .file_name()
+            .ok_or(RenderError::Path(path.to_path_buf()))?
+            .to_str()
+            .ok_or(RenderError::Path(path.to_path_buf()))?
+            .to_string();
+        let page = if !Self::extension_is_markdown(extension) {
+            Self::from_non_markdown_content(content, path, slug, extension)?
+        } else {
+            Self::from_markdown_content(content, path, slug, extension)?
+        };
+
+        Ok(page)
+    }
+
+    fn from_non_markdown_content(
+        content: &str,
+        path: &Path,
+        slug: String,
+        extension: &str,
+    ) -> Result<Self, RenderError> {
+        let (frontmatter, body) =
+            parser::extract_frontmatter(content).map_err(RenderError::Markdown)?;
+
+        let frontmatter: PageFrontmatter = frontmatter.try_into().map_err(|e| {
+            RenderError::ParseFrontmatter(format!(
+                "frontmatter for {:?}: {:?}",
+                path,
+                e.to_string()
+            ))
+        })?;
+
+        let mut template = Page::DEFAULT_TEMPLATE.to_string();
+        template.push_str(".html");
+        Ok(Self {
+            path: path.to_path_buf(),
+            title: frontmatter.title,
+            template,
+            content: body,
+            slug: slug.clone(),
+            extension: extension.to_string(),
+        })
+    }
+
+    fn from_markdown_content(
+        content: &str,
+        path: &Path,
+        slug: String,
+        extension: &str,
+    ) -> Result<Self, RenderError> {
+        let parsed = parser::parse_markdown(content).map_err(RenderError::Markdown)?;
+        let frontmatter: PageFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
+            RenderError::ParseFrontmatter(format!(
+                "frontmatter for {:?}: {:?}",
+                path,
+                e.to_string()
+            ))
+        })?;
+        let mut template = frontmatter
+            .template
+            .unwrap_or(Page::DEFAULT_TEMPLATE.to_string());
+        template.push_str(".html");
+
+        Ok(Self {
+            path: path.to_path_buf(),
+            title: frontmatter.title,
+            template,
+            content: parsed.body,
+            slug,
+            extension: extension.to_string(),
+        })
+    }
 }
 
 impl Render for Page {
@@ -67,63 +142,9 @@ impl Render for Page {
             return Ok(None);
         }
         let full_path = root_path.join(path);
-        println!("full_path: {:?}", full_path);
-        let slug = path
-            .with_extension("")
-            .file_name()
-            .ok_or(RenderError::Path(path.to_path_buf()))?
-            .to_str()
-            .ok_or(RenderError::Path(path.to_path_buf()))?
-            .to_string();
-        if !Self::extension_is_markdown(extension) {
-            println!("reading from full_path: {:?}", full_path);
-            let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
-            let (frontmatter, body) =
-                parser::extract_frontmatter(&content).map_err(RenderError::Markdown)?;
-
-            let frontmatter: PageFrontmatter = frontmatter.try_into().map_err(|e| {
-                RenderError::ParseFrontmatter(format!(
-                    "frontmatter for {:?}: {:?}",
-                    path,
-                    e.to_string()
-                ))
-            })?;
-
-            let mut template = Page::DEFAULT_TEMPLATE.to_string();
-            template.push_str(".html");
-            return Ok(Some(Self {
-                path: path.to_path_buf(),
-                title: frontmatter.title,
-                template,
-                content: body,
-                slug: slug.clone(),
-                extension: extension.to_string(),
-            }));
-        }
-
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
-        let parsed = parser::parse_markdown(&content).map_err(RenderError::Markdown)?;
-        let frontmatter: PageFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
-            RenderError::ParseFrontmatter(format!(
-                "frontmatter for {:?}: {:?}",
-                path,
-                e.to_string()
-            ))
-        })?;
-        let mut template = frontmatter
-            .template
-            .unwrap_or(Page::DEFAULT_TEMPLATE.to_string());
-        template.push_str(".html");
-
-        let res = Self {
-            path: path.to_path_buf(),
-            title: frontmatter.title,
-            template,
-            content: parsed.body,
-            slug,
-            extension: extension.to_string(),
-        };
-        Ok(Some(res))
+        let content = Self::from_content(path, extension, &content)?;
+        Ok(Some(content))
     }
 
     fn render(

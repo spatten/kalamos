@@ -67,6 +67,7 @@ impl Render for Page {
             return Ok(None);
         }
         let full_path = root_path.join(path);
+        println!("full_path: {:?}", full_path);
         let slug = path
             .with_extension("")
             .file_name()
@@ -75,6 +76,7 @@ impl Render for Page {
             .ok_or(RenderError::Path(path.to_path_buf()))?
             .to_string();
         if !Self::extension_is_markdown(extension) {
+            println!("reading from full_path: {:?}", full_path);
             let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
             let (frontmatter, body) =
                 parser::extract_frontmatter(&content).map_err(RenderError::Markdown)?;

@@ -1,5 +1,5 @@
 //! Tests for the markdown module
-use kalamos::markdown;
+use kalamos::parser;
 use simple_test_case::test_case;
 
 #[test_case("+++\ntitle = \"Hello, world!\"\n+++\n# Hello, world!", ("title = \"Hello, world!\"", "<h1>Hello, world!</h1>\n"); "simple frontmatter and post")]

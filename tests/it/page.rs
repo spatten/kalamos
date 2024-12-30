@@ -1,6 +1,9 @@
-use kalamos::{markdown, page};
+use kalamos::{page, render::Render};
 use simple_test_case::test_case;
-use tera::{Context, Tera};
+use std::env;
+use std::fs;
+use std::path::Path;
+use tera::Tera;
 
 #[test_case(
   r#"
@@ -9,29 +12,31 @@ use tera::{Context, Tera};
   {{body|safe}}
   </div>
   "#,
+  Path::new("pages/index.md"),
   r#"
-  +++
-  title = "Hello, world!"
-  +++
-  This is a *test* post.
-  "#,
-  r#"
-  <h1>Hello, world!</h1>
+  <h1>Home Page</h1>
   <div class="post">
-  <p>This is a <em>test</em> post.</p>
+  <p>This is my home page.</p>
 
   </div>
   "#
 ; "simple frontmatter and post")]
 #[test]
-fn test_page_from_content(layout: &str, content: &str, expected: &str) {
+fn test_page_from_content(layout: &str, input_path: &Path, expected: &str) {
     let mut tera = Tera::default();
-    tera.add_raw_template("hello.html", layout)
+    let output_dir = env::temp_dir();
+    let root_dir = Path::new("tests/it/testdata/simple_site");
+    tera.add_raw_template("default.html", layout)
         .expect("should be able to add template");
+    let page = page::Page::from_file(root_dir, input_path)
+        .expect("should parse")
+        .unwrap();
+    let posts = vec![];
+    page.render(&tera, &output_dir, &posts)
+        .expect("should render");
+    let output_path = output_dir.join("index.html");
+    println!("output_path: {:?}", output_path);
+    let rendered = fs::read_to_string(&output_path).expect("should read");
 
-    let parser::FrontmatterAndBody { frontmatter, body } =
-        parser::parse_markdown(content).expect("should parse");
-    let context = Context::from(parser::FrontmatterAndBody { frontmatter, body });
-    let rendered = page::render_layout(&tera, "hello.html", &context).expect("should render");
     assert_eq!(rendered, expected);
 }

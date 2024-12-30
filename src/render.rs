@@ -13,7 +13,7 @@ pub trait Render
 where
     Self: Sized,
 {
-    fn from_file(root_path: &Path, path: &Path) -> Result<Self, Error>;
+    fn from_file(root_path: &Path, path: &Path) -> Result<Option<Self>, Error>;
 
     fn to_context(&self) -> Context;
 
@@ -23,10 +23,10 @@ where
 
     fn read_from_directory(root_dir: &Path) -> Result<Vec<Self>, Error> {
         let posts_path = root_dir.join(Self::read_directory());
-        WalkDir::new(posts_path)
+        let posts = WalkDir::new(posts_path)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|e| e == "md"))
+            .filter(|e| e.file_type().is_file())
             .map(|e| -> Result<PathBuf, Error> {
                 let p = e.path().to_path_buf();
                 Ok(p.strip_prefix(root_dir)
@@ -36,7 +36,8 @@ where
             .collect::<Result<Vec<_>, Error>>()?
             .into_iter()
             .map(|p| Self::from_file(root_dir, &p))
-            .collect::<Result<Vec<_>, Error>>()
+            .collect::<Result<Vec<Option<_>>, Error>>()?;
+        Ok(posts.into_iter().flatten().collect())
     }
 }
 

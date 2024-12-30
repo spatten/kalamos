@@ -30,6 +30,7 @@ pub struct Post {
 impl Post {
     pub const DEFAULT_TEMPLATE: &str = "post";
     pub const READ_DIRECTORY: &str = "posts";
+    pub const VALID_EXTENSIONS: [&str; 2] = ["md", "markdown"];
 
     /// Extracts the date and slug from a file name
     /// The file name must be in the format YYYY-MM-DD-slug.md
@@ -79,7 +80,15 @@ impl Render for Post {
         context
     }
 
-    fn from_file(root_path: &Path, path: &Path) -> Result<Self, RenderError> {
+    fn from_file(root_path: &Path, path: &Path) -> Result<Option<Self>, RenderError> {
+        let extension = path
+            .extension()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default();
+        if !Self::VALID_EXTENSIONS.contains(&extension) {
+            return Ok(None);
+        }
         println!("post::from_files for path {:?}", path);
         let full_path = root_path.join(path);
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
@@ -105,7 +114,7 @@ impl Render for Post {
             .with_extension("html");
         let url = PathBuf::from("/").join(&output_path);
 
-        Ok(Post {
+        Ok(Some(Post {
             path: output_path,
             title: res.title,
             template,
@@ -113,7 +122,7 @@ impl Render for Post {
             date,
             url,
             slug,
-        })
+        }))
     }
 
     fn render(

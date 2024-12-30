@@ -21,6 +21,8 @@ pub struct Page {
     pub content: String,
     /// The page slug
     pub slug: String,
+    /// The extension of the input file
+    pub extension: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,6 +34,11 @@ pub struct PageFrontmatter {
 impl Page {
     pub const DEFAULT_TEMPLATE: &str = "default";
     pub const READ_DIRECTORY: &str = "pages";
+    pub const VALID_EXTENSIONS: [&str; 4] = ["md", "markdown", "html", "xml"];
+
+    fn is_markdown(&self) -> bool {
+        self.extension == "md" || self.extension == "markdown"
+    }
 }
 
 impl Render for Page {
@@ -46,14 +53,16 @@ impl Render for Page {
         context
     }
 
-    fn from_file(root_path: &Path, path: &Path) -> Result<Self, RenderError> {
-        let full_path = root_path.join(path);
-
+    fn from_file(root_path: &Path, path: &Path) -> Result<Option<Self>, RenderError> {
         let extension = path
             .extension()
             .unwrap_or_default()
             .to_str()
             .unwrap_or_default();
+        if !Self::VALID_EXTENSIONS.contains(&extension) {
+            return Ok(None);
+        }
+        let full_path = root_path.join(path);
         let slug = path
             .with_extension("")
             .file_name()
@@ -61,7 +70,7 @@ impl Render for Page {
             .to_str()
             .ok_or(RenderError::Path(path.to_path_buf()))?
             .to_string();
-        if extension != "md" {
+        if extension != "md" && extension != "markdown" {
             let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
             let (frontmatter, body) =
                 parser::extract_frontmatter(&content).map_err(RenderError::Markdown)?;
@@ -76,13 +85,14 @@ impl Render for Page {
 
             let mut template = Page::DEFAULT_TEMPLATE.to_string();
             template.push_str(".html");
-            return Ok(Self {
+            return Ok(Some(Self {
                 path: path.to_path_buf(),
                 title: frontmatter.title,
                 template,
                 content: body,
                 slug: slug.clone(),
-            });
+                extension: extension.to_string(),
+            }));
         }
 
         let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
@@ -105,8 +115,9 @@ impl Render for Page {
             template,
             content: parsed.body,
             slug,
+            extension: extension.to_string(),
         };
-        Ok(res)
+        Ok(Some(res))
     }
 
     fn render(
@@ -118,13 +129,7 @@ impl Render for Page {
         let mut context = self.to_context();
         context.insert("posts", posts);
 
-        let extension = self
-            .path
-            .extension()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or_default();
-        let output = if extension == "md" {
+        let output = if self.is_markdown() {
             templates
                 .render(&self.template, &context)
                 .map_err(RenderError::Tera)?
@@ -145,7 +150,7 @@ impl Render for Page {
         };
 
         let relative_path = self.path.strip_prefix(Self::read_directory()).unwrap();
-        let output_path = if extension == "md" {
+        let output_path = if self.is_markdown() {
             output_dir.join(relative_path).with_extension("html")
         } else {
             output_dir.join(relative_path)

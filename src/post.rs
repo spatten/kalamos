@@ -8,7 +8,7 @@ use crate::parser;
 use crate::render::Render;
 use crate::render::{Error as RenderError, RenderableFromPath};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Post {
     /// path of the input file, relative to the root of the site
     /// posts/my-post.html

@@ -105,7 +105,9 @@ pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
     // We need the posts as a variable to pass to the render function for posts and pages.
     // It can be used, for example, to get a list of all the posts to pass to the RSS feed
     // or to get a list of posts for a sidebar or an archives page.
-    let posts = Post::read_from_directory(root_dir)?;
+    let mut posts = Post::read_from_directory(root_dir)?;
+    posts.sort();
+    posts.reverse();
 
     for post in &posts {
         post.render(&templates, output_dir, &posts)?;

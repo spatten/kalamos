@@ -44,7 +44,8 @@ fn test_page_file_from_path(input_path: &str, expected_page_file: PageFile) {
   <h1>Home Page</h1>
   <div class="page">
   <p>This is my home page.</p>
-</div>"#
+
+  </div>"#
 ; "simple frontmatter and md contents")]
 #[test_case(
   r#"

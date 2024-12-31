@@ -45,7 +45,7 @@ fn test_parse_with_valid_frontmatter(markdown: &str, expected: (&str, &str)) {
         frontmatter,
         body,
         excerpt,
-    } = parser::parse_markdown(markdown).expect("should parse");
+    } = parser::parse(markdown).expect("should parse");
     assert_eq!(frontmatter, toml::from_str(expected.0).unwrap());
     assert_eq!(body, expected.1);
     // no <!--more--> in the markdown, so the excerpt should be the same as the body
@@ -57,6 +57,6 @@ fn test_parse_with_valid_frontmatter(markdown: &str, expected: (&str, &str)) {
 #[test_case("before the frontmatter\n+++\ntitle = \"Hello, world!\"\n+++\n# Hello, world!\n+++\ncontinuing"; "content before frontmatter")]
 #[test]
 fn test_parse_with_invalid_frontmatter(markdown: &str) {
-    let res = parser::parse_markdown(markdown);
+    let res = parser::parse(markdown);
     assert!(res.is_err());
 }

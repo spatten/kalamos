@@ -159,7 +159,7 @@ impl Page {
     }
 
     fn from_markdown_content(content: &str, page_file: &PageFile) -> Result<Self, RenderError> {
-        let parsed = parser::parse_markdown(content).map_err(RenderError::Markdown)?;
+        let parsed = parser::parse(content).map_err(RenderError::Markdown)?;
         let frontmatter: PageFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
@@ -178,8 +178,8 @@ impl Page {
             url: page_file.url.to_path_buf(),
             title: frontmatter.title,
             template,
-            content: parsed.body,
-            excerpt: parsed.excerpt,
+            content: parsed.body.clone(),
+            excerpt: parsed.excerpt.unwrap_or(parsed.body),
             slug: page_file.slug.clone(),
             extension: page_file.extension.to_string(),
         })

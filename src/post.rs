@@ -145,7 +145,7 @@ impl Render for Post {
     }
 
     fn from_content(post_file: PostFile, content: &str) -> Result<Self, RenderError> {
-        let parsed = parser::parse_markdown(content).map_err(RenderError::Markdown)?;
+        let parsed = parser::parse(content).map_err(RenderError::Markdown)?;
         let res: PostFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
@@ -162,8 +162,8 @@ impl Render for Post {
             output_path: post_file.output_path.clone(),
             title: res.title,
             template,
-            content: parsed.body,
-            excerpt: parsed.excerpt,
+            content: parsed.body.clone(),
+            excerpt: parsed.excerpt.unwrap_or(parsed.body),
             date: post_file.date,
             url: post_file.url.clone(),
             slug: post_file.slug.clone(),

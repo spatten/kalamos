@@ -1,4 +1,5 @@
 //! Parse a markdown file with TOML frontmatter
+use regex::Regex;
 use tera::Context;
 use thiserror::Error;
 type Frontmatter = toml::Value;
@@ -15,9 +16,13 @@ pub enum Error {
 
 #[derive(Debug)]
 pub struct FrontmatterAndBody {
+    /// The frontmatter of the page
     pub frontmatter: Frontmatter,
+    /// The html body of the page, with syntax highlighting and codeblocks
     pub body: String,
-    pub excerpt: String,
+    /// The html excerpt of the page, generated from the markdown up to the first <!--more--> in a markdown file
+    /// If there is no <!--more--> in the markdown file, this will be None
+    pub excerpt: Option<String>,
 }
 
 /// Convert to a Tera Context
@@ -71,15 +76,36 @@ pub fn extract_frontmatter(markdown: &str) -> Result<(Frontmatter, String), Erro
     Ok((frontmatter, body))
 }
 
-pub fn parse_markdown(markdown: &str) -> Result<FrontmatterAndBody, Error> {
+pub fn parse(markdown: &str) -> Result<FrontmatterAndBody, Error> {
+    let (frontmatter, body) = extract_frontmatter(markdown)?;
+    let html = parse_markdown(&body)?;
+    let excerpt = extract_excerpt(&body)?;
+
+    Ok(FrontmatterAndBody {
+        frontmatter,
+        body: html,
+        excerpt,
+    })
+}
+
+fn extract_excerpt(body: &str) -> Result<Option<String>, Error> {
+    let excerpt_re = Regex::new(r"\s*<!--more-->\s*\n").unwrap();
+    let mut split = excerpt_re.splitn(body, 2);
+    let excerpt = split.next().map(|s| s.to_string());
+    if excerpt.is_none() || split.next().is_none() {
+        return Ok(None);
+    }
+    let excerpt = excerpt.unwrap_or_default();
+    let html = parse_markdown(&excerpt)?;
+    Ok(Some(html))
+}
+
+fn parse_markdown(body: &str) -> Result<String, Error> {
     let ts = ThemeSet::load_defaults();
     let theme = ts.themes.get("InspiredGitHub").unwrap();
     let syntax_set = SyntaxSet::load_defaults_newlines();
-    let (frontmatter, body) = extract_frontmatter(markdown)?;
-    let events = pulldown_cmark::Parser::new(&body);
+    let events = pulldown_cmark::Parser::new(body);
     let mut highlighted_events = vec![];
-    let mut excerpt_events = vec![];
-    let mut still_excerpting = true;
     let mut in_codeblock = false;
     let mut codeblock_contents = String::new();
     let mut syntax_extension = String::new();
@@ -87,11 +113,6 @@ pub fn parse_markdown(markdown: &str) -> Result<FrontmatterAndBody, Error> {
 
     for event in events {
         match event.clone() {
-            pulldown_cmark::Event::Html(html) => {
-                if &html.to_string() == "<!--more-->\n" {
-                    still_excerpting = false;
-                }
-            }
             // Start collecting codeblock contents
             pulldown_cmark::Event::Start(pulldown_cmark::Tag::CodeBlock(kind)) => {
                 match kind {
@@ -117,35 +138,20 @@ pub fn parse_markdown(markdown: &str) -> Result<FrontmatterAndBody, Error> {
                 )
                 .unwrap_or(codeblock_contents.clone());
                 highlighted_events.push(pulldown_cmark::Event::Html(highlighted.clone().into()));
-                if still_excerpting {
-                    excerpt_events.push(pulldown_cmark::Event::Html(highlighted.into()));
-                }
             }
             pulldown_cmark::Event::Text(text) => {
                 if in_codeblock {
                     codeblock_contents.push_str(&text);
                 } else {
                     highlighted_events.push(event.clone());
-                    if still_excerpting {
-                        excerpt_events.push(event.clone());
-                    }
                 }
             }
             _ => {
                 highlighted_events.push(event.clone());
-                if still_excerpting {
-                    excerpt_events.push(event.clone());
-                }
             }
         }
     }
     let mut html = String::new();
     pulldown_cmark::html::push_html(&mut html, highlighted_events.into_iter());
-    let mut excerpt_html = String::new();
-    pulldown_cmark::html::push_html(&mut excerpt_html, excerpt_events.into_iter());
-    Ok(FrontmatterAndBody {
-        frontmatter,
-        body: html,
-        excerpt: excerpt_html,
-    })
+    Ok(html)
 }

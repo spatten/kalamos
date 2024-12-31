@@ -616,6 +616,7 @@ dependencies = [
  "insta",
  "maud",
  "pulldown-cmark",
+ "regex",
  "serde",
  "serde_yaml",
  "sha2",

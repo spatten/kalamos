@@ -11,7 +11,8 @@ use crate::post::Post;
 
 pub trait RenderableFromPath: TryFrom<PathBuf, Error = Error> + std::fmt::Debug {
     fn url(&self) -> PathBuf;
-    fn path(&self) -> PathBuf;
+    fn input_path(&self) -> PathBuf;
+    fn output_path(&self) -> PathBuf;
 }
 
 pub trait Render
@@ -38,7 +39,7 @@ where
                 let p = e.path().to_path_buf();
                 let path = p
                     .strip_prefix(root_dir)
-                    .map_err(Error::StripPrefix)?
+                    .map_err(|e| Error::StripPrefix(p.clone(), e))?
                     .to_path_buf();
                 Self::FileType::try_from(path)
             })
@@ -46,7 +47,7 @@ where
         let posts = post_files
             .into_iter()
             .map(|post_file| {
-                let full_path = root_dir.join(post_file.path().as_path());
+                let full_path = root_dir.join(post_file.input_path().as_path());
                 let content = fs::read_to_string(full_path).map_err(Error::ReadFile)?;
                 Self::from_content(post_file, &content)
             })
@@ -75,8 +76,8 @@ pub enum Error {
     ExtractDate(String),
     #[error("parse date error: {0}")]
     ParseDate(String, chrono::ParseError),
-    #[error("strip prefix error: {0}")]
-    StripPrefix(std::path::StripPrefixError),
+    #[error("strip prefix error: path: {0}: {1}")]
+    StripPrefix(PathBuf, std::path::StripPrefixError),
     #[error("create dir error: {0}")]
     CreateDir(std::io::Error),
     #[error("copy dir error: {0}")]

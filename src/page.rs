@@ -12,8 +12,15 @@ use crate::render::{Error as RenderError, RenderableFromPath};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Page {
     /// The relative path to the input file, relative to the root of the site
-    pub path: PathBuf,
+    /// pages/2024-12-28-my-post.md
+    pub input_path: PathBuf,
     /// A relative path to the rendered file, relative to the root of the site
+    /// This is url, but without a leading /
+    /// 2024/12/28/my-post.html
+    pub output_path: PathBuf,
+    /// A relative path to the rendered file, relative to the root of the site
+    /// This is url, but without a leading /
+    /// /2024/12/28/my-post.html
     pub url: PathBuf,
     /// the title of the page
     pub title: String,
@@ -22,6 +29,7 @@ pub struct Page {
     /// The content of the page
     pub content: String,
     /// The page slug
+    /// my-post
     pub slug: String,
     /// The extension of the input file
     pub extension: String,
@@ -36,7 +44,11 @@ pub struct PageFile {
     pub url: PathBuf,
     /// The relative path to the file, relative to the root of the site
     /// The extension will be .md for a markdown file, whereas the url with be .html
-    pub path: PathBuf,
+    pub input_path: PathBuf,
+    /// The relative path to the output file, relative to the root of the site
+    /// The extension will be .html for a markdown file, whereas the url with be .md
+    /// This is url without the leading /
+    pub output_path: PathBuf,
 }
 
 impl TryFrom<PathBuf> for PageFile {
@@ -63,12 +75,18 @@ impl TryFrom<PathBuf> for PageFile {
         } else {
             extension
         };
+
+        let stripped_path = path
+            .strip_prefix(Page::read_directory())
+            .map_err(|e| RenderError::StripPrefix(path.to_path_buf(), e))?;
+        let url = stripped_path.to_path_buf().with_extension(url_extension);
         Ok(Self {
             slug,
             extension: extension.to_string(),
             filename: path.file_name().unwrap().to_str().unwrap().to_string(),
-            url: path.to_path_buf().with_extension(url_extension),
-            path: path.to_path_buf(),
+            url: url.clone(),
+            input_path: path.to_path_buf(),
+            output_path: url,
         })
     }
 }
@@ -78,8 +96,12 @@ impl RenderableFromPath for PageFile {
         self.url.clone()
     }
 
-    fn path(&self) -> PathBuf {
-        self.path.clone()
+    fn input_path(&self) -> PathBuf {
+        self.input_path.clone()
+    }
+
+    fn output_path(&self) -> PathBuf {
+        self.output_path.clone()
     }
 }
 
@@ -109,7 +131,7 @@ impl Page {
         let frontmatter: PageFrontmatter = frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
-                page_file.path,
+                page_file.input_path,
                 e.to_string()
             ))
         })?;
@@ -117,7 +139,8 @@ impl Page {
         let mut template = Page::DEFAULT_TEMPLATE.to_string();
         template.push_str(".html");
         Ok(Self {
-            path: page_file.path.to_path_buf(),
+            output_path: page_file.output_path.to_path_buf(),
+            input_path: page_file.input_path.to_path_buf(),
             url: page_file.url.to_path_buf(),
             title: frontmatter.title,
             template,
@@ -132,7 +155,7 @@ impl Page {
         let frontmatter: PageFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
-                page_file.path,
+                page_file.input_path,
                 e.to_string()
             ))
         })?;
@@ -142,7 +165,8 @@ impl Page {
         template.push_str(".html");
 
         Ok(Self {
-            path: page_file.path.to_path_buf(),
+            output_path: page_file.output_path.to_path_buf(),
+            input_path: page_file.input_path.to_path_buf(),
             url: page_file.url.to_path_buf(),
             title: frontmatter.title,
             template,
@@ -159,7 +183,7 @@ impl Render for Page {
     fn to_context(&self) -> Context {
         let mut context = Context::new();
         context.insert("title", &self.title);
-        context.insert("path", &self.path);
+        context.insert("path", &self.output_path);
         context.insert("url", &self.url);
         context.insert("body", &self.content);
         context.insert("slug", &self.slug);
@@ -192,11 +216,11 @@ impl Render for Page {
                 .map_err(RenderError::Tera)?
         } else {
             let template = self
-                .path
+                .input_path
                 .file_name()
-                .ok_or(RenderError::Path(self.path.to_path_buf()))?
+                .ok_or(RenderError::Path(self.input_path.to_path_buf()))?
                 .to_str()
-                .ok_or(RenderError::Path(self.path.to_path_buf()))?;
+                .ok_or(RenderError::Path(self.input_path.to_path_buf()))?;
             let mut templates = templates.clone();
             templates
                 .add_raw_template(template, &self.content)
@@ -206,13 +230,7 @@ impl Render for Page {
                 .map_err(RenderError::Tera)?
         };
 
-        let relative_path = self.path.strip_prefix(Self::read_directory()).unwrap();
-        let output_path = if self.is_markdown() {
-            output_dir.join(relative_path).with_extension("html")
-        } else {
-            output_dir.join(relative_path)
-        };
-
+        let output_path = output_dir.join(self.output_path.clone());
         let parent = output_path
             .parent()
             .ok_or(RenderError::CreateDir(std::io::Error::new(

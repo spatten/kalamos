@@ -11,8 +11,11 @@ use crate::render::{Error as RenderError, RenderableFromPath};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Post {
     /// path of the input file, relative to the root of the site
+    /// posts/my-post.html
+    pub input_path: PathBuf,
+    /// path of the output file, relative to the root of the site
     /// 2024/12/28/my-post.html
-    pub path: PathBuf,
+    pub output_path: PathBuf,
     /// the title of the page
     pub title: String,
     /// the template to use to render the page
@@ -21,9 +24,11 @@ pub struct Post {
     pub content: String,
     /// The date the post was published
     pub date: NaiveDate,
-    /// The url of the post. This is path, but with a leading / and an extension of html
+    /// The url of the post. This is output_path, but with a leading / and an extension of html
+    /// /2024/12/28/my-post.html
     pub url: PathBuf,
     /// The slug of the post
+    /// my-post
     pub slug: String,
 }
 
@@ -33,7 +38,8 @@ pub struct PostFile {
     pub slug: String,
     pub extension: String,
     pub url: PathBuf,
-    pub path: PathBuf,
+    pub input_path: PathBuf,
+    pub output_path: PathBuf,
 }
 
 impl TryFrom<PathBuf> for PostFile {
@@ -49,12 +55,18 @@ impl TryFrom<PathBuf> for PostFile {
         if !Post::VALID_EXTENSIONS.contains(&extension) {
             return Err(RenderError::Path(path.to_path_buf()));
         }
+
+        let stripped_path = path
+            .strip_prefix(Post::read_directory())
+            .map_err(|e| RenderError::StripPrefix(path.to_path_buf(), e))?;
+        let url = stripped_path.to_path_buf().with_extension("html");
         Ok(Self {
             date,
             slug,
             extension: extension.to_string(),
-            url: path.to_path_buf().with_extension("html"),
-            path: path.to_path_buf(),
+            url: url.clone(),
+            input_path: path.to_path_buf(),
+            output_path: url,
         })
     }
 }
@@ -64,8 +76,12 @@ impl RenderableFromPath for PostFile {
         self.url.clone()
     }
 
-    fn path(&self) -> PathBuf {
-        self.path.clone()
+    fn input_path(&self) -> PathBuf {
+        self.input_path.clone()
+    }
+
+    fn output_path(&self) -> PathBuf {
+        self.output_path.clone()
     }
 }
 
@@ -91,7 +107,6 @@ impl PostFile {
         let slug = parts.into_iter().skip(3).collect::<Vec<_>>().join("-");
         let date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
             .map_err(|e| RenderError::ParseDate(path.to_string_lossy().to_string(), e))?;
-
         Ok((date, slug))
     }
 }
@@ -118,8 +133,8 @@ impl Render for Post {
     fn to_context(&self) -> Context {
         let mut context = Context::new();
         context.insert("title", &self.title);
-        context.insert("path", &self.path);
-        context.insert("url", &self.path);
+        context.insert("path", &self.output_path);
+        context.insert("url", &self.url);
         context.insert("date", &self.date);
         context.insert("body", &self.content);
         context.insert("slug", &self.slug);
@@ -140,7 +155,8 @@ impl Render for Post {
         template.push_str(".html");
 
         Ok(Post {
-            path: post_file.url.clone(),
+            input_path: post_file.input_path.clone(),
+            output_path: post_file.output_path.clone(),
             title: res.title,
             template,
             content: page.body,
@@ -161,7 +177,7 @@ impl Render for Post {
         let output = templates
             .render(&self.template, &context)
             .map_err(RenderError::Tera)?;
-        let output_path = output_dir.join(&self.path);
+        let output_path = output_dir.join(self.output_path.clone());
         let parent = output_path
             .parent()
             .ok_or(RenderError::CreateDir(std::io::Error::new(

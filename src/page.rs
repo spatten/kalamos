@@ -213,10 +213,6 @@ impl Render for Page {
             output_dir.join(relative_path)
         };
 
-        println!(
-            "about to write {:?} to output_path: {:?}",
-            self.path, output_path
-        );
         let parent = output_path
             .parent()
             .ok_or(RenderError::CreateDir(std::io::Error::new(
@@ -224,7 +220,6 @@ impl Render for Page {
                 "no parent directory",
             )))?;
         fs::create_dir_all(parent).map_err(RenderError::CreateDir)?;
-        println!("writing page to {:?}", output_path);
         fs::write(&output_path, output).map_err(RenderError::WriteFile)?;
         Ok(())
     }

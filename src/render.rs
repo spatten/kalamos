@@ -30,7 +30,6 @@ where
 
     fn read_from_directory(root_dir: &Path) -> Result<Vec<Self>, Error> {
         let posts_path = root_dir.join(Self::read_directory());
-        println!("reading posts from {:?}", posts_path);
         let post_files = WalkDir::new(posts_path)
             .into_iter()
             .filter_map(|e| e.ok())
@@ -48,7 +47,6 @@ where
             .into_iter()
             .map(|post_file| {
                 let full_path = root_dir.join(post_file.path().as_path());
-                println!("reading {:?} from {:?}", post_file, full_path);
                 let content = fs::read_to_string(full_path).map_err(Error::ReadFile)?;
                 Self::from_content(post_file, &content)
             })
@@ -101,21 +99,16 @@ pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
     // It can be used, for example, to get a list of all the posts to pass to the RSS feed
     // or to get a list of posts for a sidebar or an archives page.
     let posts = Post::read_from_directory(root_dir)?;
-    println!("read posts");
 
     for post in &posts {
         post.render(&templates, output_dir, &posts)?;
     }
-    println!("rendered posts");
 
     // get all the md files in the pages directory and create Pages from them
-    println!("reading pages");
     let pages = Page::read_from_directory(root_dir)?;
-    println!("writing pages");
     for page in &pages {
         page.render(&templates, output_dir, &posts)?;
     }
-    println!("rendered pages");
 
     // copy static files from assets directory
     let assets_path = root_dir.join("assets");

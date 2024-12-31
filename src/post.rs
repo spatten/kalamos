@@ -170,7 +170,6 @@ impl Render for Post {
             )))?;
 
         fs::create_dir_all(parent).map_err(RenderError::CreateDir)?;
-        println!("writing post to {:?}", output_path);
         fs::write(&output_path, output).map_err(RenderError::WriteFile)?;
         Ok(())
     }

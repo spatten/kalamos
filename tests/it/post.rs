@@ -64,7 +64,6 @@ fn test_post_from_content(layout: &str, input_path: &Path, content: &str, expect
     page.render(&tera, &output_dir, &posts)
         .expect("should render");
     let output_path = output_dir.join("2024/12/first.html");
-    println!("output_path: {:?}", output_path);
     let rendered = fs::read_to_string(&output_path).expect("should read");
 
     assert_eq!(rendered, expected);

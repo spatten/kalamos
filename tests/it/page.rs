@@ -77,10 +77,7 @@ fn test_page_from_content(layout: &str, input_path: &Path, content: &str, expect
     page.render(&tera, &output_dir, &posts)
         .expect("should render");
     let output_path = output_dir.join("index.html");
-    println!("output_path: {:?}", output_path);
     let rendered = fs::read_to_string(&output_path).expect("should read");
-    println!("rendered: {:?}", rendered);
-    println!("expected: {:?}", expected);
 
     assert_eq!(rendered, expected);
 }

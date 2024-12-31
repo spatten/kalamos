@@ -86,11 +86,9 @@ pub fn parse_markdown(markdown: &str) -> Result<FrontmatterAndBody, Error> {
     let default_syntax = syntax_set.find_syntax_plain_text();
 
     for event in events {
-        println!("{:?}", event);
         match event.clone() {
             pulldown_cmark::Event::Html(html) => {
                 if &html.to_string() == "<!--more-->\n" {
-                    println!("EXCERPT ENDED!!");
                     still_excerpting = false;
                 }
             }
@@ -98,12 +96,9 @@ pub fn parse_markdown(markdown: &str) -> Result<FrontmatterAndBody, Error> {
             pulldown_cmark::Event::Start(pulldown_cmark::Tag::CodeBlock(kind)) => {
                 match kind {
                     pulldown_cmark::CodeBlockKind::Fenced(language) => {
-                        println!("found codeblock. language = {:?}", language);
                         syntax_extension = language.to_string();
                     }
-                    pulldown_cmark::CodeBlockKind::Indented => {
-                        println!("found indented codeblock");
-                    }
+                    pulldown_cmark::CodeBlockKind::Indented => {}
                 }
                 in_codeblock = true;
                 codeblock_contents = String::new();

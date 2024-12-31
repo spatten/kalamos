@@ -119,15 +119,15 @@ pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
         page.render(&templates, output_dir, &posts)?;
     }
 
-    // copy static files from assets directory
-    let assets_path = root_dir.join("assets");
-    WalkDir::new(assets_path)
+    // copy all files in the direct_copy  directory
+    let direct_copy_path = root_dir.join("direct_copy");
+    WalkDir::new(&direct_copy_path)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
         .for_each(|e| {
             let p = e.path();
-            let output_path = output_dir.join(p.strip_prefix(root_dir).unwrap());
+            let output_path = output_dir.join(p.strip_prefix(&direct_copy_path).unwrap());
             let output_dir = output_path.parent().unwrap();
             fs::create_dir_all(output_dir).unwrap();
             fs::copy(p, output_path).unwrap();

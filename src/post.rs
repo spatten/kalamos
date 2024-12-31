@@ -55,12 +55,7 @@ impl TryFrom<PathBuf> for PostFile {
         if !Post::VALID_EXTENSIONS.contains(&extension) {
             return Err(RenderError::Path(path.to_path_buf()));
         }
-        let url = format!("{}/{}/{}.html", date.year(), date.month(), slug);
-
-        let stripped_path = path
-            .strip_prefix(Post::read_directory())
-            .map_err(|e| RenderError::StripPrefix(path.to_path_buf(), e))?;
-        let url = stripped_path.to_path_buf().with_extension("html");
+        let url = PathBuf::from(format!("{}/{}/{}.html", date.year(), date.month(), slug));
         Ok(Self {
             date,
             slug,

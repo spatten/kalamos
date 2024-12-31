@@ -22,6 +22,10 @@ pub struct Post {
     pub template: String,
     /// The content of the page
     pub content: String,
+    /// The excerpt of the page. This is the content of the page up to the first <!--more-->
+    /// in a markdown file. If it is a non-markdown file, or if there is no <!--more--> in a markdown file,
+    /// it will be the same as the content.
+    pub excerpt: String,
     /// The date the post was published
     pub date: NaiveDate,
     /// The url of the post. This is output_path, but with a leading / and an extension of html
@@ -135,13 +139,14 @@ impl Render for Post {
         context.insert("url", &self.url);
         context.insert("date", &self.date);
         context.insert("body", &self.content);
+        context.insert("context", &self.excerpt);
         context.insert("slug", &self.slug);
         context
     }
 
     fn from_content(post_file: PostFile, content: &str) -> Result<Self, RenderError> {
-        let page = parser::parse_markdown(content).map_err(RenderError::Markdown)?;
-        let res: PostFrontmatter = page.frontmatter.try_into().map_err(|e| {
+        let parsed = parser::parse_markdown(content).map_err(RenderError::Markdown)?;
+        let res: PostFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
                 post_file.url,
@@ -157,7 +162,8 @@ impl Render for Post {
             output_path: post_file.output_path.clone(),
             title: res.title,
             template,
-            content: page.body,
+            content: parsed.body,
+            excerpt: parsed.excerpt,
             date: post_file.date,
             url: post_file.url.clone(),
             slug: post_file.slug.clone(),

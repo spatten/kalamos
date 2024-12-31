@@ -28,6 +28,10 @@ pub struct Page {
     pub template: String,
     /// The content of the page
     pub content: String,
+    /// The excerpt of the page. This is the content of the page up to the first <!--more-->
+    /// in a markdown file. If it is a non-markdown file, or if there is no <!--more--> in a markdown file,
+    /// it will be the same as the content.
+    pub excerpt: String,
     /// The page slug
     /// my-post
     pub slug: String,
@@ -147,7 +151,8 @@ impl Page {
             url: page_file.url.to_path_buf(),
             title: frontmatter.title,
             template,
-            content: body,
+            content: body.clone(),
+            excerpt: body,
             slug: page_file.slug.clone(),
             extension: page_file.extension.to_string(),
         })
@@ -174,6 +179,7 @@ impl Page {
             title: frontmatter.title,
             template,
             content: parsed.body,
+            excerpt: parsed.excerpt,
             slug: page_file.slug.clone(),
             extension: page_file.extension.to_string(),
         })
@@ -189,6 +195,7 @@ impl Render for Page {
         context.insert("path", &self.output_path);
         context.insert("url", &self.url);
         context.insert("body", &self.content);
+        context.insert("excerpt", &self.excerpt);
         context.insert("slug", &self.slug);
         context.insert("current_date", &Utc::now().date_naive());
         context

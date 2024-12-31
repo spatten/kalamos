@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -55,6 +55,7 @@ impl TryFrom<PathBuf> for PostFile {
         if !Post::VALID_EXTENSIONS.contains(&extension) {
             return Err(RenderError::Path(path.to_path_buf()));
         }
+        let url = format!("{}/{}/{}.html", date.year(), date.month(), slug);
 
         let stripped_path = path
             .strip_prefix(Post::read_directory())

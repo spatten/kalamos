@@ -31,9 +31,8 @@ fn test_page_file_from_path(input_path: &str, expected_page_file: PageFile) {
   r#"
   <h1>{{title}}</h1>
   <div class="page">
-  {{body|safe}}
-  </div>
-  "#,
+  {% block content %}{{body|safe}}{% endblock content %}
+  </div>"#,
   Path::new("pages/index.md"),
   r#"
   +++
@@ -45,10 +44,27 @@ fn test_page_file_from_path(input_path: &str, expected_page_file: PageFile) {
   <h1>Home Page</h1>
   <div class="page">
   <p>This is my home page.</p>
-
-  </div>
-  "#
+</div>"#
 ; "simple frontmatter and md contents")]
+#[test_case(
+  r#"
+  <h1>{{title}}</h1>
+  <div class="page">{% block content %}{{body|safe}}{% endblock content %}</div>"#,
+  Path::new("pages/index.html"),
+  r#"
+  +++
+  title = "Home Page"
+  +++
+{% extends "default.html" %}
+{% block content %}
+  <p>This is my home page.</p>
+{% endblock content %}
+  "#,
+  r#"
+  <h1>Home Page</h1>
+  <div class="page">
+  <p>This is my home page.</p>
+</div>"#; "simple frontmatter and html contents")]
 #[test]
 fn test_page_from_content(layout: &str, input_path: &Path, content: &str, expected: &str) {
     let mut tera = Tera::default();
@@ -63,6 +79,8 @@ fn test_page_from_content(layout: &str, input_path: &Path, content: &str, expect
     let output_path = output_dir.join("index.html");
     println!("output_path: {:?}", output_path);
     let rendered = fs::read_to_string(&output_path).expect("should read");
+    println!("rendered: {:?}", rendered);
+    println!("expected: {:?}", expected);
 
     assert_eq!(rendered, expected);
 }

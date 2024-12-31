@@ -11,11 +11,10 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     /// Generate the static site.
-    #[command(arg_required_else_help = true)]
     Generate {
         /// the input directory. Defaults to the current directory.
         input_dir: Option<PathBuf>,
-        /// the output directory. Defaults to /tmp/kalamos-output
+        /// the output directory. Defaults to ./site
         output_dir: Option<PathBuf>,
     },
 
@@ -33,8 +32,8 @@ enum Commands {
     },
 }
 
-/// Render a static site.
-///  cargo run -- --path tests/it/testdata/simple_site --output /tmp/output
+const DEFAULT_OUTPUT_DIR: &str = "./site";
+
 fn main() {
     let args = Cli::parse();
     match args.command {
@@ -42,9 +41,9 @@ fn main() {
             input_dir,
             output_dir,
         } => {
-            println!("input_dir: {:?}, output_dir: {:?}", input_dir, output_dir);
             let input_dir = input_dir.unwrap_or(PathBuf::from("."));
-            let output_dir = output_dir.unwrap_or(PathBuf::from("/tmp/kalamos-output"));
+            let output_dir = output_dir.unwrap_or(PathBuf::from(DEFAULT_OUTPUT_DIR));
+            println!("input_dir: {:?}, output_dir: {:?}", input_dir, output_dir);
             render::render_dir(&input_dir, &output_dir).unwrap_or_else(|e| {
                 panic!("Error rendering posts and pages: {}", e);
             });

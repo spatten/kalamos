@@ -21,14 +21,20 @@ where
 {
     type FileType: RenderableFromPath;
 
+    /// Create a Page or Post object from a file
     fn from_content(file: Self::FileType, content: &str) -> Result<Self, Error>;
 
+    /// Generate a context for the template
     fn to_context(&self) -> Context;
 
+    /// Render the file and write it to the output directory
     fn render(&self, templates: &Tera, output_dir: &Path, posts: &[Post]) -> Result<(), Error>;
 
+    /// The directory to read from. For Posts, this is the posts directory. For Pages, this is the pages directory.
     fn read_directory() -> String;
 
+    /// For Posts, read all files in the posts directory and create Posts from them
+    /// For Pages, read all files in the pages directory and create Pages from them
     fn read_from_directory(root_dir: &Path) -> Result<Vec<Self>, Error> {
         let posts_path = root_dir.join(Self::read_directory());
         let post_files = WalkDir::new(posts_path)

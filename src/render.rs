@@ -9,11 +9,18 @@ use crate::page::Page;
 use crate::parser;
 use crate::post::Post;
 
+pub trait RenderableFromPath: TryFrom<PathBuf, Error = Error> + std::fmt::Debug {
+    fn url(&self) -> PathBuf;
+    fn path(&self) -> PathBuf;
+}
+
 pub trait Render
 where
     Self: Sized,
 {
-    fn from_file(root_path: &Path, path: &Path) -> Result<Option<Self>, Error>;
+    type FileType: RenderableFromPath;
+
+    fn from_content(file: Self::FileType, content: &str) -> Result<Self, Error>;
 
     fn to_context(&self) -> Context;
 
@@ -23,21 +30,30 @@ where
 
     fn read_from_directory(root_dir: &Path) -> Result<Vec<Self>, Error> {
         let posts_path = root_dir.join(Self::read_directory());
-        let posts = WalkDir::new(posts_path)
+        println!("reading posts from {:?}", posts_path);
+        let post_files = WalkDir::new(posts_path)
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_file())
-            .map(|e| -> Result<PathBuf, Error> {
+            .map(|e| -> Result<Self::FileType, Error> {
                 let p = e.path().to_path_buf();
-                Ok(p.strip_prefix(root_dir)
+                let path = p
+                    .strip_prefix(root_dir)
                     .map_err(Error::StripPrefix)?
-                    .to_path_buf())
+                    .to_path_buf();
+                Self::FileType::try_from(path)
             })
-            .collect::<Result<Vec<_>, Error>>()?
+            .collect::<Result<Vec<_>, Error>>()?;
+        let posts = post_files
             .into_iter()
-            .map(|p| Self::from_file(root_dir, &p))
-            .collect::<Result<Vec<Option<_>>, Error>>()?;
-        Ok(posts.into_iter().flatten().collect())
+            .map(|post_file| {
+                let full_path = root_dir.join(post_file.path().as_path());
+                println!("reading {:?} from {:?}", post_file, full_path);
+                let content = fs::read_to_string(full_path).map_err(Error::ReadFile)?;
+                Self::from_content(post_file, &content)
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+        Ok(posts.into_iter().collect())
     }
 }
 
@@ -93,8 +109,9 @@ pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
     println!("rendered posts");
 
     // get all the md files in the pages directory and create Pages from them
+    println!("reading pages");
     let pages = Page::read_from_directory(root_dir)?;
-    println!("read pages");
+    println!("writing pages");
     for page in &pages {
         page.render(&templates, output_dir, &posts)?;
     }

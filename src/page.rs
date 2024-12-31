@@ -6,13 +6,15 @@ use tera::{Context, Tera};
 
 use crate::parser;
 use crate::post::Post;
-use crate::render::Error as RenderError;
 use crate::render::Render;
+use crate::render::{Error as RenderError, RenderableFromPath};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Page {
-    /// A relative path to the file, relative to the root of the site
+    /// The relative path to the input file, relative to the root of the site
     pub path: PathBuf,
+    /// A relative path to the rendered file, relative to the root of the site
+    pub url: PathBuf,
     /// the title of the page
     pub title: String,
     /// the template to use to render the page
@@ -23,6 +25,62 @@ pub struct Page {
     pub slug: String,
     /// The extension of the input file
     pub extension: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PageFile {
+    pub slug: String,
+    pub extension: String,
+    pub filename: String,
+    /// The url of the file, relative to the site root
+    pub url: PathBuf,
+    /// The relative path to the file, relative to the root of the site
+    /// The extension will be .md for a markdown file, whereas the url with be .html
+    pub path: PathBuf,
+}
+
+impl TryFrom<PathBuf> for PageFile {
+    type Error = RenderError;
+
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        let slug = path
+            .with_extension("")
+            .file_name()
+            .ok_or(RenderError::Path(path.clone()))?
+            .to_str()
+            .ok_or(RenderError::Path(path.clone()))?
+            .to_string();
+        let extension = &path
+            .extension()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default();
+        if !Page::VALID_EXTENSIONS.contains(extension) {
+            return Err(RenderError::Path(path.to_path_buf()));
+        }
+        let url_extension = if Page::extension_is_markdown(extension) {
+            "html"
+        } else {
+            extension
+        };
+        Ok(Self {
+            slug,
+            extension: extension.to_string(),
+            filename: path.file_name().unwrap().to_str().unwrap().to_string(),
+            url: path.to_path_buf().with_extension(url_extension),
+            path: path.to_path_buf(),
+        })
+    }
+}
+
+impl RenderableFromPath for PageFile {
+    fn url(&self) -> PathBuf {
+        self.url.clone()
+    }
+
+    fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,36 +102,14 @@ impl Page {
         Self::extension_is_markdown(&self.extension)
     }
 
-    fn from_content(path: &Path, extension: &str, content: &str) -> Result<Self, RenderError> {
-        let slug = path
-            .with_extension("")
-            .file_name()
-            .ok_or(RenderError::Path(path.to_path_buf()))?
-            .to_str()
-            .ok_or(RenderError::Path(path.to_path_buf()))?
-            .to_string();
-        let page = if !Self::extension_is_markdown(extension) {
-            Self::from_non_markdown_content(content, path, slug, extension)?
-        } else {
-            Self::from_markdown_content(content, path, slug, extension)?
-        };
-
-        Ok(page)
-    }
-
-    fn from_non_markdown_content(
-        content: &str,
-        path: &Path,
-        slug: String,
-        extension: &str,
-    ) -> Result<Self, RenderError> {
+    fn from_non_markdown_content(content: &str, page_file: &PageFile) -> Result<Self, RenderError> {
         let (frontmatter, body) =
             parser::extract_frontmatter(content).map_err(RenderError::Markdown)?;
 
         let frontmatter: PageFrontmatter = frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
-                path,
+                page_file.path,
                 e.to_string()
             ))
         })?;
@@ -81,26 +117,22 @@ impl Page {
         let mut template = Page::DEFAULT_TEMPLATE.to_string();
         template.push_str(".html");
         Ok(Self {
-            path: path.to_path_buf(),
+            path: page_file.path.to_path_buf(),
+            url: page_file.url.to_path_buf(),
             title: frontmatter.title,
             template,
             content: body,
-            slug: slug.clone(),
-            extension: extension.to_string(),
+            slug: page_file.slug.clone(),
+            extension: page_file.extension.to_string(),
         })
     }
 
-    fn from_markdown_content(
-        content: &str,
-        path: &Path,
-        slug: String,
-        extension: &str,
-    ) -> Result<Self, RenderError> {
+    fn from_markdown_content(content: &str, page_file: &PageFile) -> Result<Self, RenderError> {
         let parsed = parser::parse_markdown(content).map_err(RenderError::Markdown)?;
         let frontmatter: PageFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
-                path,
+                page_file.path,
                 e.to_string()
             ))
         })?;
@@ -110,41 +142,39 @@ impl Page {
         template.push_str(".html");
 
         Ok(Self {
-            path: path.to_path_buf(),
+            path: page_file.path.to_path_buf(),
+            url: page_file.url.to_path_buf(),
             title: frontmatter.title,
             template,
             content: parsed.body,
-            slug,
-            extension: extension.to_string(),
+            slug: page_file.slug.clone(),
+            extension: page_file.extension.to_string(),
         })
     }
 }
 
 impl Render for Page {
+    type FileType = PageFile;
+
     fn to_context(&self) -> Context {
         let mut context = Context::new();
         context.insert("title", &self.title);
         context.insert("path", &self.path);
-        context.insert("url", &self.path);
+        context.insert("url", &self.url);
         context.insert("body", &self.content);
         context.insert("slug", &self.slug);
         context.insert("current_date", &Utc::now().date_naive());
         context
     }
 
-    fn from_file(root_path: &Path, path: &Path) -> Result<Option<Self>, RenderError> {
-        let extension = path
-            .extension()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or_default();
-        if !Self::VALID_EXTENSIONS.contains(&extension) {
-            return Ok(None);
-        }
-        let full_path = root_path.join(path);
-        let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
-        let content = Self::from_content(path, extension, &content)?;
-        Ok(Some(content))
+    fn from_content(page_file: PageFile, content: &str) -> Result<Self, RenderError> {
+        let page = if !Self::extension_is_markdown(&page_file.extension) {
+            Self::from_non_markdown_content(content, &page_file)?
+        } else {
+            Self::from_markdown_content(content, &page_file)?
+        };
+
+        Ok(page)
     }
 
     fn render(
@@ -183,6 +213,10 @@ impl Render for Page {
             output_dir.join(relative_path)
         };
 
+        println!(
+            "about to write {:?} to output_path: {:?}",
+            self.path, output_path
+        );
         let parent = output_path
             .parent()
             .ok_or(RenderError::CreateDir(std::io::Error::new(

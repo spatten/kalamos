@@ -1,16 +1,16 @@
-use chrono::{Datelike, NaiveDate};
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tera::{Context, Tera};
 
 use crate::parser;
-use crate::render::Error as RenderError;
 use crate::render::Render;
+use crate::render::{Error as RenderError, RenderableFromPath};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Post {
-    /// path of the rendered file, relative to the root of the site
+    /// path of the input file, relative to the root of the site
     /// 2024/12/28/my-post.html
     pub path: PathBuf,
     /// the title of the page
@@ -21,17 +21,55 @@ pub struct Post {
     pub content: String,
     /// The date the post was published
     pub date: NaiveDate,
-    /// The url of the post. This is path, but with a leading /
+    /// The url of the post. This is path, but with a leading / and an extension of html
     pub url: PathBuf,
     /// The slug of the post
     pub slug: String,
 }
 
-impl Post {
-    pub const DEFAULT_TEMPLATE: &str = "post";
-    pub const READ_DIRECTORY: &str = "posts";
-    pub const VALID_EXTENSIONS: [&str; 2] = ["md", "markdown"];
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PostFile {
+    pub date: NaiveDate,
+    pub slug: String,
+    pub extension: String,
+    pub url: PathBuf,
+    pub path: PathBuf,
+}
 
+impl TryFrom<PathBuf> for PostFile {
+    type Error = RenderError;
+
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        let (date, slug) = Self::extract_date_and_slug(&path)?;
+        let extension = path
+            .extension()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default();
+        if !Post::VALID_EXTENSIONS.contains(&extension) {
+            return Err(RenderError::Path(path.to_path_buf()));
+        }
+        Ok(Self {
+            date,
+            slug,
+            extension: extension.to_string(),
+            url: path.to_path_buf().with_extension("html"),
+            path: path.to_path_buf(),
+        })
+    }
+}
+
+impl RenderableFromPath for PostFile {
+    fn url(&self) -> PathBuf {
+        self.url.clone()
+    }
+
+    fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
+}
+
+impl PostFile {
     /// Extracts the date and slug from a file name
     /// The file name must be in the format YYYY-MM-DD-slug.md
     fn extract_date_and_slug(path: &Path) -> Result<(NaiveDate, String), RenderError> {
@@ -58,6 +96,12 @@ impl Post {
     }
 }
 
+impl Post {
+    pub const DEFAULT_TEMPLATE: &str = "post";
+    pub const READ_DIRECTORY: &str = "posts";
+    pub const VALID_EXTENSIONS: [&str; 2] = ["md", "markdown"];
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostFrontmatter {
     pub title: String,
@@ -65,6 +109,8 @@ pub struct PostFrontmatter {
 }
 
 impl Render for Post {
+    type FileType = PostFile;
+
     fn read_directory() -> String {
         Post::READ_DIRECTORY.to_string()
     }
@@ -80,23 +126,12 @@ impl Render for Post {
         context
     }
 
-    fn from_file(root_path: &Path, path: &Path) -> Result<Option<Self>, RenderError> {
-        let extension = path
-            .extension()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or_default();
-        if !Self::VALID_EXTENSIONS.contains(&extension) {
-            return Ok(None);
-        }
-        println!("post::from_files for path {:?}", path);
-        let full_path = root_path.join(path);
-        let content = fs::read_to_string(&full_path).map_err(RenderError::ReadFile)?;
-        let page = parser::parse_markdown(&content).map_err(RenderError::Markdown)?;
+    fn from_content(post_file: PostFile, content: &str) -> Result<Self, RenderError> {
+        let page = parser::parse_markdown(content).map_err(RenderError::Markdown)?;
         let res: PostFrontmatter = page.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
-                path,
+                post_file.url,
                 e.to_string()
             ))
         })?;
@@ -104,25 +139,15 @@ impl Render for Post {
         let mut template = res.template.unwrap_or(Post::DEFAULT_TEMPLATE.to_string());
         template.push_str(".html");
 
-        let path = path.to_path_buf();
-
-        let relative_path = path.strip_prefix(Post::READ_DIRECTORY).unwrap();
-        let (date, slug) = Post::extract_date_and_slug(relative_path)?;
-        let output_path = PathBuf::from(date.year().to_string())
-            .join(date.month().to_string())
-            .join(&slug)
-            .with_extension("html");
-        let url = PathBuf::from("/").join(&output_path);
-
-        Ok(Some(Post {
-            path: output_path,
+        Ok(Post {
+            path: post_file.url.clone(),
             title: res.title,
             template,
             content: page.body,
-            date,
-            url,
-            slug,
-        }))
+            date: post_file.date,
+            url: post_file.url.clone(),
+            slug: post_file.slug.clone(),
+        })
     }
 
     fn render(

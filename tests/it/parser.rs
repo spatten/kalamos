@@ -46,10 +46,13 @@ fn test_parse_with_valid_frontmatter(markdown: &str, expected: (&str, &str)) {
         body,
         excerpt,
     } = parser::parse(markdown).expect("should parse");
-    assert_eq!(frontmatter, toml::from_str(expected.0).unwrap());
+    assert_eq!(
+        frontmatter,
+        toml::from_str(expected.0).expect("should parse frontmatter")
+    );
     assert_eq!(body, expected.1);
-    // no <!--more--> in the markdown, so the excerpt should be the same as the body
-    assert_eq!(excerpt, expected.1);
+    // no <!--more--> in the markdown, so the excerpt will be None
+    assert_eq!(excerpt, None);
 }
 
 #[test_case(

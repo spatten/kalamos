@@ -55,14 +55,15 @@ impl TryFrom<PathBuf> for PostFile {
         if !Post::VALID_EXTENSIONS.contains(&extension) {
             return Err(RenderError::Path(path.to_path_buf()));
         }
-        let url = PathBuf::from(format!("{}/{}/{}.html", date.year(), date.month(), slug));
+        let url = PathBuf::from(format!("/{}/{}/{}.html", date.year(), date.month(), slug));
+        let output_path = PathBuf::from(format!("{}/{}/{}.html", date.year(), date.month(), slug));
         Ok(Self {
             date,
             slug,
             extension: extension.to_string(),
             url: url.clone(),
             input_path: path.to_path_buf(),
-            output_path: url,
+            output_path: output_path.clone(),
         })
     }
 }
@@ -85,6 +86,7 @@ impl PostFile {
     /// Extracts the date and slug from a file name
     /// The file name must be in the format YYYY-MM-DD-slug.md
     fn extract_date_and_slug(path: &Path) -> Result<(NaiveDate, String), RenderError> {
+        let path = path.with_extension("");
         let file_name = path
             .file_name()
             .ok_or(RenderError::ExtractDate(path.to_string_lossy().to_string()))?

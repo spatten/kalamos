@@ -1,9 +1,31 @@
-use kalamos::{page, render::Render};
+use kalamos::{page, page::PageFile, render::Render};
 use simple_test_case::test_case;
 use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tera::Tera;
+
+macro_rules! page_file {
+    ($slug:expr, $extension:expr, $filename:expr, $url:expr, $input_path:expr, $output_path:expr ) => {
+        PageFile {
+            slug: $slug.to_string(),
+            extension: $extension.to_string(),
+            filename: $filename.to_string(),
+            url: PathBuf::from($url),
+            input_path: PathBuf::from($input_path),
+            output_path: PathBuf::from($output_path),
+        }
+    };
+}
+
+#[test_case("pages/about.md", page_file!("about", "md", "about.md", "/about.html", "pages/about.md", "about.html"); "about.md")]
+#[test_case("pages/index.html", page_file!("index", "html", "index.html", "/index.html", "pages/index.html", "index.html"); "index.html")]
+#[test]
+fn test_page_from_file(input_path: &str, expected_page_file: PageFile) {
+    let input_path = PathBuf::from(input_path);
+    let page_file = PageFile::try_from(input_path).expect("should parse");
+    assert_eq!(page_file, expected_page_file)
+}
 
 #[test_case(
   r#"

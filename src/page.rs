@@ -35,7 +35,7 @@ pub struct Page {
     pub extension: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PageFile {
     pub slug: String,
     pub extension: String,
@@ -79,14 +79,17 @@ impl TryFrom<PathBuf> for PageFile {
         let stripped_path = path
             .strip_prefix(Page::read_directory())
             .map_err(|e| RenderError::StripPrefix(path.to_path_buf(), e))?;
-        let url = stripped_path.to_path_buf().with_extension(url_extension);
+        let url = PathBuf::from("/")
+            .join(stripped_path)
+            .with_extension(url_extension);
+        let output_path = stripped_path.with_extension(url_extension);
         Ok(Self {
             slug,
             extension: extension.to_string(),
             filename: path.file_name().unwrap().to_str().unwrap().to_string(),
             url: url.clone(),
             input_path: path.to_path_buf(),
-            output_path: url,
+            output_path: output_path.to_path_buf(),
         })
     }
 }

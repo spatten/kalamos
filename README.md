@@ -6,4 +6,4 @@ It's mostly just a project to get better at Rust, and is nowhere near production
 
 # License
 
-Dual licensed under the MIT and Apache 2.0 licenses.
+Dual licensed under the [MIT](./LICENSE-MIT) and [Apache 2.0](./LICENSE-APACHE) licenses.

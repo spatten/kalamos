@@ -90,7 +90,12 @@ impl TryFrom<PathBuf> for PageFile {
         Ok(Self {
             slug,
             extension: extension.to_string(),
-            filename: path.file_name().unwrap().to_str().unwrap().to_string(),
+            filename: path
+                .file_name()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap_or_default()
+                .to_string(),
             url: url.clone(),
             input_path: path.to_path_buf(),
             output_path: output_path.to_path_buf(),

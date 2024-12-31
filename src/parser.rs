@@ -66,7 +66,7 @@ pub fn extract_frontmatter(markdown: &str) -> Result<(Frontmatter, String), Erro
         if !before.trim().is_empty() {
             return Err(Error::ContentBeforeFrontmatter(before.to_string()));
         }
-        let frontmatter_content = sections.next().unwrap();
+        let frontmatter_content = sections.next().unwrap_or_default();
         toml::from_str(frontmatter_content).map_err(|e| Error::InvalidFrontmatter(e.to_string()))?
     };
     let body = sections
@@ -89,7 +89,7 @@ pub fn parse(markdown: &str) -> Result<FrontmatterAndBody, Error> {
 }
 
 fn extract_excerpt(body: &str) -> Result<Option<String>, Error> {
-    let excerpt_re = Regex::new(r"\s*<!--more-->\s*\n").unwrap();
+    let excerpt_re = Regex::new(r"\s*<!--more-->\s*\n").expect("should be able to compile regex");
     let mut split = excerpt_re.splitn(body, 2);
     let excerpt = split.next().map(|s| s.to_string());
     if excerpt.is_none() || split.next().is_none() {
@@ -102,7 +102,7 @@ fn extract_excerpt(body: &str) -> Result<Option<String>, Error> {
 
 fn parse_markdown(body: &str) -> Result<String, Error> {
     let ts = ThemeSet::load_defaults();
-    let theme = ts.themes.get("InspiredGitHub").unwrap();
+    let theme = ts.themes.get("InspiredGitHub").expect("should have theme");
     let syntax_set = SyntaxSet::load_defaults_newlines();
     let events = pulldown_cmark::Parser::new(body);
     let mut highlighted_events = vec![];

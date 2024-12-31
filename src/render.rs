@@ -113,7 +113,7 @@ pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
         post.render(&templates, output_dir, &posts)?;
     }
 
-    // get all the md files in the pages directory and create Pages from them
+    // get all the md, html and xml files in the pages directory, render them and write them to the output directory
     let pages = Page::read_from_directory(root_dir)?;
     for page in &pages {
         page.render(&templates, output_dir, &posts)?;
@@ -121,16 +121,21 @@ pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
 
     // copy all files in the direct_copy directory
     let direct_copy_path = root_dir.join("direct_copy");
-    WalkDir::new(&direct_copy_path)
+    for entry in WalkDir::new(&direct_copy_path)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
-        .for_each(|e| {
-            let p = e.path();
-            let output_path = output_dir.join(p.strip_prefix(&direct_copy_path).unwrap());
-            let output_dir = output_path.parent().unwrap();
-            fs::create_dir_all(output_dir).unwrap();
-            fs::copy(p, output_path).unwrap();
-        });
+    {
+        let p = entry.path();
+        let stripped = p
+            .strip_prefix(&direct_copy_path)
+            .map_err(|e| Error::StripPrefix(p.to_path_buf(), e))?;
+        let output_path = output_dir.join(stripped);
+        let output_dir = output_path
+            .parent()
+            .ok_or(Error::Path(output_path.to_path_buf()))?;
+        fs::create_dir_all(output_dir).map_err(Error::CopyDir)?;
+        fs::copy(p, output_path).map_err(Error::CopyDir)?;
+    }
     Ok(())
 }

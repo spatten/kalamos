@@ -28,6 +28,7 @@ pub struct Post {
     pub excerpt: String,
     /// The date the post was published
     pub date: NaiveDate,
+    pub date_struct: DateStruct,
     /// The url of the post. This is output_path, but with a leading / and an extension of html
     /// /2024/12/28/my-post.html
     pub url: PathBuf,
@@ -125,6 +126,23 @@ pub struct PostFrontmatter {
     pub template: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Ord, PartialOrd)]
+pub struct DateStruct {
+    pub year: i32,
+    pub month: u32,
+    pub day: u32,
+}
+
+impl From<NaiveDate> for DateStruct {
+    fn from(date: NaiveDate) -> Self {
+        Self {
+            year: date.year(),
+            month: date.month(),
+            day: date.day(),
+        }
+    }
+}
+
 impl Render for Post {
     type FileType = PostFile;
 
@@ -133,14 +151,21 @@ impl Render for Post {
     }
 
     fn to_context(&self) -> Context {
+        let date_struct = DateStruct {
+            year: self.date.year(),
+            month: self.date.month(),
+            day: self.date.day(),
+        };
         let mut context = Context::new();
         context.insert("title", &self.title);
         context.insert("path", &self.output_path);
         context.insert("url", &self.url);
         context.insert("date", &self.date);
+        context.insert("date_struct", &date_struct);
         context.insert("body", &self.content);
         context.insert("context", &self.excerpt);
         context.insert("slug", &self.slug);
+        context.insert("next", "nice");
         context
     }
 
@@ -165,6 +190,7 @@ impl Render for Post {
             content: parsed.body.clone(),
             excerpt: parsed.excerpt.unwrap_or(parsed.body),
             date: post_file.date,
+            date_struct: DateStruct::from(post_file.date),
             url: post_file.url.clone(),
             slug: post_file.slug.clone(),
         })

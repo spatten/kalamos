@@ -21,7 +21,7 @@ macro_rules! page_file {
 #[test_case("pages/about.md", page_file!("about", "md", "about.md", "/about.html", "pages/about.md", "about.html"); "about.md")]
 #[test_case("pages/index.html", page_file!("index", "html", "index.html", "/index.html", "pages/index.html", "index.html"); "index.html")]
 #[test]
-fn test_page_from_file(input_path: &str, expected_page_file: PageFile) {
+fn test_page_file_from_path(input_path: &str, expected_page_file: PageFile) {
     let input_path = PathBuf::from(input_path);
     let page_file = PageFile::try_from(input_path).expect("should parse");
     assert_eq!(page_file, expected_page_file)
@@ -48,7 +48,7 @@ fn test_page_from_file(input_path: &str, expected_page_file: PageFile) {
 
   </div>
   "#
-; "simple frontmatter and post")]
+; "simple frontmatter and md contents")]
 #[test]
 fn test_page_from_content(layout: &str, input_path: &Path, content: &str, expected: &str) {
     let mut tera = Tera::default();

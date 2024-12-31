@@ -32,7 +32,7 @@ pub struct Post {
     pub slug: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PostFile {
     pub date: NaiveDate,
     pub slug: String,

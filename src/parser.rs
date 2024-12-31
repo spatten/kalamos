@@ -8,9 +8,9 @@ use syntect::parsing::SyntaxSet;
 
 #[derive(Error, Debug, Eq, PartialEq)]
 pub enum Error {
-    #[error("invalid frontmatter")]
+    #[error("invalid frontmatter: {0}")]
     InvalidFrontmatter(String),
-    #[error("content before frontmatter")]
+    #[error("content before frontmatter: {0}")]
     ContentBeforeFrontmatter(String),
 }
 

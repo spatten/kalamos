@@ -149,7 +149,7 @@ impl Render for Post {
         let res: PostFrontmatter = parsed.frontmatter.try_into().map_err(|e| {
             RenderError::ParseFrontmatter(format!(
                 "frontmatter for {:?}: {:?}",
-                post_file.url,
+                post_file.input_path,
                 e.to_string()
             ))
         })?;

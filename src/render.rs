@@ -119,7 +119,7 @@ pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
         page.render(&templates, output_dir, &posts)?;
     }
 
-    // copy all files in the direct_copy  directory
+    // copy all files in the direct_copy directory
     let direct_copy_path = root_dir.join("direct_copy");
     WalkDir::new(&direct_copy_path)
         .into_iter()

@@ -22,19 +22,7 @@ enum Commands {
         output_dir: PathBuf,
     },
 
-    /// Watch the file system and rebuild if the files change
-    /// To see logs, run with `RUST_LOG=info kalamos watch`
-    #[command()]
-    Watch {
-        /// The directory to watch
-        #[arg(default_value = DEFAULT_INPUT_DIR)]
-        input_dir: PathBuf,
-        /// the output directory.
-        #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
-        output_dir: PathBuf,
-    },
-
-    /// Serve a static site.
+    /// Serve a static site and watch for changes to the input directory.
     /// To see logs, run with `RUST_LOG=info kalamos serve`
     #[command()]
     Serve {
@@ -100,20 +88,6 @@ fn main() {
             });
             spawner.join().unwrap();
             watcher.join().unwrap();
-        }
-        Commands::Watch {
-            input_dir,
-            output_dir,
-        } => {
-            let input_dir = input_dir.canonicalize().unwrap();
-            let output_dir = output_dir.canonicalize().unwrap();
-            info!(
-                "Watching {:?} and outputting to {:?}",
-                input_dir, output_dir
-            );
-            watch::watch(&input_dir, &output_dir).unwrap_or_else(|e| {
-                panic!("Error watching: {:?}", e);
-            });
         }
         Commands::New { name, template } => {
             info!("New site: {:?}, template: {:?}", name, template);

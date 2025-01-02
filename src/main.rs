@@ -1,8 +1,7 @@
 use clap::{Parser, Subcommand};
-use kalamos::{render, serve};
+use kalamos::{render, serve, watch};
 use log::info;
-use notify::{Event, RecursiveMode, Watcher};
-use std::{path::PathBuf, sync::mpsc};
+use std::{path::PathBuf, thread};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -23,28 +22,19 @@ enum Commands {
         output_dir: PathBuf,
     },
 
-    /// Watch the file system and rebuild if the files change
-    /// To see logs, run with `RUST_LOG=info kalamos watch`
-    #[command()]
-    Watch {
-        /// The directory to watch
-        #[arg(default_value = DEFAULT_INPUT_DIR)]
-        input_dir: PathBuf,
-        /// the output directory.
-        #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
-        output_dir: PathBuf,
-    },
-
-    /// Serve a static site.
+    /// Serve a static site and watch for changes to the input directory.
     /// To see logs, run with `RUST_LOG=info kalamos serve`
     #[command()]
     Serve {
         /// The directory to serve
-        #[arg(default_value = DEFAULT_OUTPUT_DIR)]
+        #[arg(default_value = DEFAULT_INPUT_DIR)]
         input_dir: PathBuf,
         /// The port to serve on
         #[arg(short, long, default_value_t = DEFAULT_PORT)]
         port: u16,
+        /// the output directory.
+        #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
+        output_dir: PathBuf,
     },
 
     /// Generate a new static site.
@@ -74,49 +64,30 @@ fn main() {
                 panic!("Error rendering posts and pages: {}", e);
             });
         }
-        Commands::Serve { input_dir, port } => {
-            info!("Serving {:?} on port {}...", input_dir, port);
-            serve::serve(&input_dir, port).unwrap_or_else(|e| {
-                panic!("Error serving: {:?}", e);
-            });
-        }
-        Commands::Watch {
+        Commands::Serve {
             input_dir,
             output_dir,
+            port,
         } => {
-            let input_dir = input_dir.canonicalize().unwrap();
-            let output_dir = output_dir.canonicalize().unwrap();
-            info!(
-                "Watching {:?} and outputting to {:?}",
-                input_dir, output_dir
-            );
-            let (tx, rx) = mpsc::channel::<Result<Event, notify::Error>>();
+            info!("Serving {:?} on port {}...", input_dir, port);
+            let output_dir_clone = output_dir.clone();
 
-            // Use recommended_watcher() to automatically select the best implementation
-            // for your platform. The `EventHandler` passed to this constructor can be a
-            // closure, a `std::sync::mpsc::Sender`, a `crossbeam_channel::Sender`, or
-            // another type the trait is implemented for.
-            let mut watcher =
-                notify::recommended_watcher(tx).unwrap_or_else(|e| panic!("notify error: ${e}"));
-
-            // Add a path to be watched. All files and directories at that path and
-            // below will be monitored for changes.
-            watcher.watch(&input_dir, RecursiveMode::Recursive).unwrap();
-            for result in rx {
-                match result {
-                    Ok(event) => {
-                        // deal with case where the output directory is a subdirectory of the input directory
-                        if event.paths.iter().all(|p| p.starts_with(&output_dir)) {
-                            continue;
-                        }
-                        info!("change event: {:?}", event);
-                        render::render_dir(&input_dir, &output_dir).unwrap_or_else(|e| {
-                            info!("Error rendering posts and pages: {}", e);
-                        });
-                    }
-                    Err(e) => info!("change event error: {:?}", e),
-                }
-            }
+            let spawner = thread::spawn(move || {
+                serve::serve(&output_dir_clone, port).unwrap_or_else(|e| {
+                    panic!("Error serving: {:?}", e);
+                });
+            });
+            let watcher = thread::spawn(move || {
+                info!(
+                    "Watching {:?} and outputting to {:?}",
+                    input_dir, output_dir
+                );
+                watch::watch(&input_dir, &output_dir).unwrap_or_else(|e| {
+                    panic!("Error watching: {:?}", e);
+                });
+            });
+            spawner.join().unwrap();
+            watcher.join().unwrap();
         }
         Commands::New { name, template } => {
             info!("New site: {:?}, template: {:?}", name, template);

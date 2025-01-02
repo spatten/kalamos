@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 use kalamos::render;
+use log::info;
 use notify::{Event, RecursiveMode, Watcher};
 use std::{path::PathBuf, sync::mpsc};
 
@@ -12,6 +13,7 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     /// Generate the static site.
+    /// To see logs, run with `RUST_LOG=info kalamos generate`
     Generate {
         /// the input directory. Defaults to the current directory.
         #[arg(default_value = DEFAULT_INPUT_DIR, short, long)]
@@ -22,6 +24,7 @@ enum Commands {
     },
 
     /// Watch the file system and rebuild if the files change
+    /// To see logs, run with `RUST_LOG=info kalamos watch`
     #[command()]
     Watch {
         /// The directory to watch
@@ -33,6 +36,7 @@ enum Commands {
     },
 
     /// Serve a static site.
+    /// To see logs, run with `RUST_LOG=info kalamos serve`
     #[command()]
     Serve {
         /// The directory to serve
@@ -64,13 +68,13 @@ fn main() {
             input_dir,
             output_dir,
         } => {
-            println!("input_dir: {:?}, output_dir: {:?}", input_dir, output_dir);
+            info!("input_dir: {:?}, output_dir: {:?}", input_dir, output_dir);
             render::render_dir(&input_dir, &output_dir).unwrap_or_else(|e| {
                 panic!("Error rendering posts and pages: {}", e);
             });
         }
         Commands::Serve { input_dir, port } => {
-            println!("Serving {:?} on port {}...", input_dir, port);
+            info!("Serving {:?} on port {}...", input_dir, port);
         }
         Commands::Watch {
             input_dir,
@@ -78,7 +82,7 @@ fn main() {
         } => {
             let input_dir = input_dir.canonicalize().unwrap();
             let output_dir = output_dir.canonicalize().unwrap();
-            println!(
+            info!(
                 "Watching {:?} and outputting to {:?}",
                 input_dir, output_dir
             );
@@ -101,17 +105,17 @@ fn main() {
                         if event.paths.iter().all(|p| p.starts_with(&output_dir)) {
                             continue;
                         }
-                        println!("change event: {:?}", event);
+                        info!("change event: {:?}", event);
                         render::render_dir(&input_dir, &output_dir).unwrap_or_else(|e| {
-                            println!("Error rendering posts and pages: {}", e);
+                            info!("Error rendering posts and pages: {}", e);
                         });
                     }
-                    Err(e) => println!("change event error: {:?}", e),
+                    Err(e) => info!("change event error: {:?}", e),
                 }
             }
         }
         Commands::New { name, template } => {
-            println!("New site: {:?}, template: {:?}", name, template);
+            info!("New site: {:?}, template: {:?}", name, template);
         }
     }
 }

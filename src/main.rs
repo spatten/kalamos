@@ -1,6 +1,8 @@
 use clap::{Parser, Subcommand};
-use kalamos::render;
-use std::path::PathBuf;
+use kalamos::{render, serve};
+use log::info;
+use notify::{Event, RecursiveMode, Watcher};
+use std::{path::PathBuf, sync::mpsc};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -11,9 +13,10 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     /// Generate the static site.
+    /// To see logs, run with `RUST_LOG=info kalamos generate`
     Generate {
         /// the input directory. Defaults to the current directory.
-        #[arg(default_value = ".", short, long)]
+        #[arg(default_value = DEFAULT_INPUT_DIR, short, long)]
         input_dir: PathBuf,
         /// the output directory.
         #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
@@ -21,10 +24,11 @@ enum Commands {
     },
 
     /// Watch the file system and rebuild if the files change
+    /// To see logs, run with `RUST_LOG=info kalamos watch`
     #[command()]
     Watch {
         /// The directory to watch
-        #[arg(default_value = ".")]
+        #[arg(default_value = DEFAULT_INPUT_DIR)]
         input_dir: PathBuf,
         /// the output directory.
         #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
@@ -32,6 +36,7 @@ enum Commands {
     },
 
     /// Serve a static site.
+    /// To see logs, run with `RUST_LOG=info kalamos serve`
     #[command()]
     Serve {
         /// The directory to serve
@@ -53,34 +58,68 @@ enum Commands {
 }
 
 const DEFAULT_OUTPUT_DIR: &str = "./site";
+const DEFAULT_INPUT_DIR: &str = ".";
 const DEFAULT_PORT: u16 = 7878;
 
 fn main() {
+    env_logger::init();
     let args = Cli::parse();
     match args.command {
         Commands::Generate {
             input_dir,
             output_dir,
         } => {
-            println!("input_dir: {:?}, output_dir: {:?}", input_dir, output_dir);
+            info!("input_dir: {:?}, output_dir: {:?}", input_dir, output_dir);
             render::render_dir(&input_dir, &output_dir).unwrap_or_else(|e| {
                 panic!("Error rendering posts and pages: {}", e);
             });
         }
         Commands::Serve { input_dir, port } => {
-            println!("Serving {:?} on port {}...", input_dir, port);
+            info!("Serving {:?} on port {}...", input_dir, port);
+            serve::serve(&input_dir, port).unwrap_or_else(|e| {
+                panic!("Error serving: {:?}", e);
+            });
         }
         Commands::Watch {
             input_dir,
             output_dir,
         } => {
-            println!(
+            let input_dir = input_dir.canonicalize().unwrap();
+            let output_dir = output_dir.canonicalize().unwrap();
+            info!(
                 "Watching {:?} and outputting to {:?}",
                 input_dir, output_dir
             );
+            let (tx, rx) = mpsc::channel::<Result<Event, notify::Error>>();
+
+            // Use recommended_watcher() to automatically select the best implementation
+            // for your platform. The `EventHandler` passed to this constructor can be a
+            // closure, a `std::sync::mpsc::Sender`, a `crossbeam_channel::Sender`, or
+            // another type the trait is implemented for.
+            let mut watcher =
+                notify::recommended_watcher(tx).unwrap_or_else(|e| panic!("notify error: ${e}"));
+
+            // Add a path to be watched. All files and directories at that path and
+            // below will be monitored for changes.
+            watcher.watch(&input_dir, RecursiveMode::Recursive).unwrap();
+            for result in rx {
+                match result {
+                    Ok(event) => {
+                        // deal with case where the output directory is a subdirectory of the input directory
+                        if event.paths.iter().all(|p| p.starts_with(&output_dir)) {
+                            continue;
+                        }
+                        info!("change event: {:?}", event);
+                        render::render_dir(&input_dir, &output_dir).unwrap_or_else(|e| {
+                            info!("Error rendering posts and pages: {}", e);
+                        });
+                    }
+                    Err(e) => info!("change event error: {:?}", e),
+                }
+            }
         }
         Commands::New { name, template } => {
-            println!("New site: {:?}, template: {:?}", name, template);
+            info!("New site: {:?}, template: {:?}", name, template);
         }
     }
 }

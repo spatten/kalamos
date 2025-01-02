@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use kalamos::render;
+use kalamos::{render, serve};
 use log::info;
 use notify::{Event, RecursiveMode, Watcher};
 use std::{path::PathBuf, sync::mpsc};
@@ -62,6 +62,7 @@ const DEFAULT_INPUT_DIR: &str = ".";
 const DEFAULT_PORT: u16 = 7878;
 
 fn main() {
+    env_logger::init();
     let args = Cli::parse();
     match args.command {
         Commands::Generate {
@@ -75,6 +76,9 @@ fn main() {
         }
         Commands::Serve { input_dir, port } => {
             info!("Serving {:?} on port {}...", input_dir, port);
+            serve::serve(&input_dir, port).unwrap_or_else(|e| {
+                panic!("Error serving: {:?}", e);
+            });
         }
         Commands::Watch {
             input_dir,

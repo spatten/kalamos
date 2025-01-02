@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use kalamos::render;
-use std::path::PathBuf;
+use notify::{Event, RecursiveMode, Watcher};
+use std::{path::PathBuf, sync::mpsc};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -75,10 +76,39 @@ fn main() {
             input_dir,
             output_dir,
         } => {
+            let input_dir = input_dir.canonicalize().unwrap();
+            let output_dir = output_dir.canonicalize().unwrap();
             println!(
                 "Watching {:?} and outputting to {:?}",
                 input_dir, output_dir
             );
+            let (tx, rx) = mpsc::channel::<Result<Event, notify::Error>>();
+
+            // Use recommended_watcher() to automatically select the best implementation
+            // for your platform. The `EventHandler` passed to this constructor can be a
+            // closure, a `std::sync::mpsc::Sender`, a `crossbeam_channel::Sender`, or
+            // another type the trait is implemented for.
+            let mut watcher =
+                notify::recommended_watcher(tx).unwrap_or_else(|e| panic!("notify error: ${e}"));
+
+            // Add a path to be watched. All files and directories at that path and
+            // below will be monitored for changes.
+            watcher.watch(&input_dir, RecursiveMode::Recursive).unwrap();
+            for result in rx {
+                match result {
+                    Ok(event) => {
+                        // deal with case where the output directory is a subdirectory of the input directory
+                        if event.paths.iter().all(|p| p.starts_with(&output_dir)) {
+                            continue;
+                        }
+                        println!("change event: {:?}", event);
+                        render::render_dir(&input_dir, &output_dir).unwrap_or_else(|e| {
+                            println!("Error rendering posts and pages: {}", e);
+                        });
+                    }
+                    Err(e) => println!("change event error: {:?}", e),
+                }
+            }
         }
         Commands::New { name, template } => {
             println!("New site: {:?}, template: {:?}", name, template);

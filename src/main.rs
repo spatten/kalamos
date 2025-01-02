@@ -13,7 +13,7 @@ enum Commands {
     /// Generate the static site.
     Generate {
         /// the input directory. Defaults to the current directory.
-        #[arg(default_value = ".", short, long)]
+        #[arg(default_value = DEFAULT_INPUT_DIR, short, long)]
         input_dir: PathBuf,
         /// the output directory.
         #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
@@ -24,7 +24,7 @@ enum Commands {
     #[command()]
     Watch {
         /// The directory to watch
-        #[arg(default_value = ".")]
+        #[arg(default_value = DEFAULT_INPUT_DIR)]
         input_dir: PathBuf,
         /// the output directory.
         #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
@@ -53,6 +53,7 @@ enum Commands {
 }
 
 const DEFAULT_OUTPUT_DIR: &str = "./site";
+const DEFAULT_INPUT_DIR: &str = ".";
 const DEFAULT_PORT: u16 = 7878;
 
 fn main() {

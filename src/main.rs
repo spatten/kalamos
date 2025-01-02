@@ -20,9 +20,27 @@ enum Commands {
         output_dir: PathBuf,
     },
 
+    /// Watch the file system and rebuild if the files change
+    #[command()]
+    Watch {
+        /// The directory to watch
+        #[arg(default_value = ".")]
+        input_dir: PathBuf,
+        /// the output directory.
+        #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
+        output_dir: PathBuf,
+    },
+
     /// Serve a static site.
     #[command()]
-    Serve,
+    Serve {
+        /// The directory to serve
+        #[arg(default_value = DEFAULT_OUTPUT_DIR)]
+        input_dir: PathBuf,
+        /// The port to serve on
+        #[arg(short, long, default_value_t = DEFAULT_PORT)]
+        port: u16,
+    },
 
     /// Generate a new static site.
     #[command(arg_required_else_help = true)]
@@ -35,6 +53,7 @@ enum Commands {
 }
 
 const DEFAULT_OUTPUT_DIR: &str = "./site";
+const DEFAULT_PORT: u16 = 7878;
 
 fn main() {
     let args = Cli::parse();
@@ -48,8 +67,17 @@ fn main() {
                 panic!("Error rendering posts and pages: {}", e);
             });
         }
-        Commands::Serve => {
-            println!("Serving...");
+        Commands::Serve { input_dir, port } => {
+            println!("Serving {:?} on port {}...", input_dir, port);
+        }
+        Commands::Watch {
+            input_dir,
+            output_dir,
+        } => {
+            println!(
+                "Watching {:?} and outputting to {:?}",
+                input_dir, output_dir
+            );
         }
         Commands::New { name, template } => {
             println!("New site: {:?}, template: {:?}", name, template);

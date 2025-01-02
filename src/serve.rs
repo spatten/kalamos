@@ -39,12 +39,10 @@ pub fn serve(input_dir: &Path, port: u16) -> Result<(), simple_server::Error> {
 }
 
 fn file_content(root_path: &Path, path: &str) -> Result<RequestInfo, simple_server::Error> {
-    info!("file_content for: {:?} {:?}", root_path, path);
     let path = root_path.join(path);
     let path_with_index = path.join("index.html");
     match (&path.is_file(), &path_with_index.is_file()) {
         (true, _) => {
-            info!("file_content for path: {:?} {:?} exists", root_path, path);
             let content = std::fs::read(&path)?;
             let mime_type = mime_guess::from_path(&path).first_or_text_plain();
             Ok(RequestInfo {
@@ -54,10 +52,6 @@ fn file_content(root_path: &Path, path: &str) -> Result<RequestInfo, simple_serv
             })
         }
         (_, true) => {
-            info!(
-                "file_content for path with index: {:?} {:?} exists",
-                root_path, path_with_index
-            );
             let content = std::fs::read(&path_with_index)?;
             let mime_type = mime_guess::from_path(&path_with_index).first_or_text_plain();
             Ok(RequestInfo {
@@ -67,7 +61,6 @@ fn file_content(root_path: &Path, path: &str) -> Result<RequestInfo, simple_serv
             })
         }
         (_, _) => {
-            info!("not found for {:?} {:?}", root_path, path);
             let not_found_path = root_path.join(NOT_FOUND_PATH);
             let content = if not_found_path.exists() {
                 std::fs::read(not_found_path)?

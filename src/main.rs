@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use kalamos::{render, serve, watch};
 use log::info;
-use std::path::PathBuf;
+use std::{path::PathBuf, thread};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -39,11 +39,14 @@ enum Commands {
     #[command()]
     Serve {
         /// The directory to serve
-        #[arg(default_value = DEFAULT_OUTPUT_DIR)]
+        #[arg(default_value = DEFAULT_INPUT_DIR)]
         input_dir: PathBuf,
         /// The port to serve on
         #[arg(short, long, default_value_t = DEFAULT_PORT)]
         port: u16,
+        /// the output directory.
+        #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
+        output_dir: PathBuf,
     },
 
     /// Generate a new static site.
@@ -73,11 +76,30 @@ fn main() {
                 panic!("Error rendering posts and pages: {}", e);
             });
         }
-        Commands::Serve { input_dir, port } => {
+        Commands::Serve {
+            input_dir,
+            output_dir,
+            port,
+        } => {
             info!("Serving {:?} on port {}...", input_dir, port);
-            serve::serve(&input_dir, port).unwrap_or_else(|e| {
-                panic!("Error serving: {:?}", e);
+            let output_dir_clone = output_dir.clone();
+
+            let spawner = thread::spawn(move || {
+                serve::serve(&output_dir_clone, port).unwrap_or_else(|e| {
+                    panic!("Error serving: {:?}", e);
+                });
             });
+            let watcher = thread::spawn(move || {
+                info!(
+                    "Watching {:?} and outputting to {:?}",
+                    input_dir, output_dir
+                );
+                watch::watch(&input_dir, &output_dir).unwrap_or_else(|e| {
+                    panic!("Error watching: {:?}", e);
+                });
+            });
+            spawner.join().unwrap();
+            watcher.join().unwrap();
         }
         Commands::Watch {
             input_dir,

@@ -13,9 +13,11 @@ enum Commands {
     /// Generate the static site.
     Generate {
         /// the input directory. Defaults to the current directory.
-        input_dir: Option<PathBuf>,
-        /// the output directory. Defaults to ./site
-        output_dir: Option<PathBuf>,
+        #[arg(default_value = ".", short, long)]
+        input_dir: PathBuf,
+        /// the output directory.
+        #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
+        output_dir: PathBuf,
     },
 
     /// Serve a static site.
@@ -41,8 +43,6 @@ fn main() {
             input_dir,
             output_dir,
         } => {
-            let input_dir = input_dir.unwrap_or(PathBuf::from("."));
-            let output_dir = output_dir.unwrap_or(PathBuf::from(DEFAULT_OUTPUT_DIR));
             println!("input_dir: {:?}, output_dir: {:?}", input_dir, output_dir);
             render::render_dir(&input_dir, &output_dir).unwrap_or_else(|e| {
                 panic!("Error rendering posts and pages: {}", e);

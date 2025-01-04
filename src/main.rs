@@ -1,38 +1,11 @@
 use clap::{Parser, Subcommand};
 use kalamos::{
-    deploy::{self, DeployConfig, DeployStrategy},
+    config::Config,
+    deploy::{self},
     render, serve, watch,
 };
 use log::info;
-use serde::{Deserialize, Serialize};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    thread,
-};
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Config {
-    deploy: Option<DeployConfig>,
-}
-
-#[derive(Debug)]
-pub enum ConfigError {
-    IoError(std::io::Error),
-    TomlError(toml::de::Error),
-}
-
-impl Config {
-    fn load(input_dir: &Path) -> Result<Option<Self>, ConfigError> {
-        let config_path = input_dir.join("config.toml");
-        if !config_path.exists() {
-            return Ok(None);
-        }
-        let config_str = fs::read_to_string(config_path).map_err(ConfigError::IoError)?;
-        let config: Config = toml::from_str(&config_str).map_err(ConfigError::TomlError)?;
-        Ok(Some(config))
-    }
-}
+use std::{path::PathBuf, thread};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -138,19 +111,7 @@ fn main() {
                 panic!("Error loading config: {:?}", e);
             });
             if let Some(config) = config {
-                if let Some(deploy_config) = config.deploy {
-                    match deploy_config.strategy {
-                        DeployStrategy::S3AndCloudfront => {
-                            deploy::deploy_to_s3_and_cloudfront(
-                                &input_dir,
-                                &output_dir,
-                                &deploy_config.bucket,
-                            );
-                        }
-                    }
-                } else {
-                    println!("No deploy config found");
-                }
+                deploy::deploy(&input_dir, &output_dir, &config.deploy.map(|c| c.into()));
             } else {
                 println!("No config file found");
             }

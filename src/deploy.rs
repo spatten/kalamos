@@ -3,6 +3,7 @@ use std::{collections::HashSet, fs, path::Path};
 use aws_sdk_cloudfront::types::{InvalidationBatch, Paths};
 use aws_sdk_s3::{primitives::ByteStream, types::ObjectCannedAcl};
 use chrono::Utc;
+use log::info;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use walkdir::WalkDir;
@@ -90,12 +91,14 @@ pub async fn deploy_to_s3_and_cloudfront(
     output_dir: &Path,
     bucket: &str,
 ) -> Result<(), Error> {
-    println!("Deploying to S3 and Cloudfront");
-    println!("Input directory: {:?}", input_dir);
-    println!("Output directory: {:?}", output_dir);
-    println!("Bucket name: {:?}", bucket);
+    info!("Deploying to S3 and Cloudfront");
+    info!("Input directory: {:?}", input_dir);
+    info!("Output directory: {:?}", output_dir);
+    info!("Bucket name: {:?}", bucket);
 
+    info!("rendering site");
     render::render_dir(input_dir, output_dir).map_err(Error::RenderError)?;
+    info!("rendering site complete\n");
     let config = aws_config::from_env().load().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let response = s3_client
@@ -105,7 +108,7 @@ pub async fn deploy_to_s3_and_cloudfront(
         .await
         .map_err(|e| Error::S3Error(AwsError::new(e.to_string())))?;
     let region = response.bucket_region().ok_or(Error::NoRegion)?;
-    println!("\n\n{:?}", region);
+    info!("S3 region: {:?}", region);
 
     // Upload the files to the bucket
     upload_site_to_s3(output_dir, bucket, s3_client).await?;
@@ -120,6 +123,7 @@ async fn upload_site_to_s3(
     bucket_name: &str,
     s3_client: aws_sdk_s3::Client,
 ) -> Result<(), Error> {
+    info!("uploading site to s3");
     let files = WalkDir::new(site_dir)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -134,9 +138,8 @@ async fn upload_site_to_s3(
             .to_str()
             .ok_or(Error::GenerateKey(file_path.to_path_buf()))?;
         let mime_type = mime_guess::from_path(key).first_or_text_plain();
-        println!(
-            "Uploading path: {:?}, key: {}, mime_type: {}",
-            file_path,
+        info!(
+            "Uploading to: {}, mime_type: {}",
             key,
             mime_type.essence_str()
         );
@@ -173,10 +176,8 @@ async fn upload_site_to_s3(
                 .collect::<Vec<_>>()
         })
         .collect::<HashSet<_>>();
-    println!("files on s3: {:?}", files_on_s3);
-    println!("uploaded files: {:?}", uploaded_files);
     let files_to_remove = files_on_s3.difference(&uploaded_files);
-    println!("files to remove: {:?}", files_to_remove);
+    info!("files to remove: {:?}", files_to_remove);
     for key in files_to_remove {
         s3_client
             .delete_object()
@@ -186,6 +187,7 @@ async fn upload_site_to_s3(
             .await
             .map_err(|e| Error::S3Error(AwsError::new(e.to_string())))?;
     }
+    info!("upload to s3 complete\n");
     Ok(())
 }
 
@@ -194,6 +196,7 @@ async fn invalidate_cloudfront_cache(
     region: &str,
     cloudfront_client: &aws_sdk_cloudfront::Client,
 ) -> Result<(), Error> {
+    info!("invalidating cloudfront cache");
     let response = cloudfront_client.list_distributions().send().await;
     let distributions = response
         .map_err(|e| Error::CloudfrontError(AwsError::new(e.to_string())))?
@@ -211,7 +214,7 @@ async fn invalidate_cloudfront_cache(
         None => false,
     });
     let distribution_id = distribution.ok_or(Error::NoDistributionList)?.clone().id;
-    println!("\n\ndistribution ID: {:?}", distribution_id);
+    info!("cloudfront distribution ID: {:?}", distribution_id);
     let invalidation_paths = Paths::builder()
         .items("/*")
         .quantity(1)
@@ -224,12 +227,13 @@ async fn invalidate_cloudfront_cache(
         .caller_reference(timestamp)
         .build()
         .expect("invalidation batch");
-    let invalidate_request = cloudfront_client
+    cloudfront_client
         .create_invalidation()
         .distribution_id(distribution_id)
         .invalidation_batch(invalidation_batch)
         .send()
-        .await;
-    println!("{:?}", invalidate_request);
+        .await
+        .map_err(|e| Error::CloudfrontError(AwsError::new(e.to_string())))?;
+    info!("cloudfront cache busted!");
     Ok(())
 }

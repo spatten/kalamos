@@ -1,3 +1,4 @@
+pub mod deploy;
 pub mod page;
 pub mod parser;
 pub mod post;

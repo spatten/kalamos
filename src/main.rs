@@ -1,7 +1,38 @@
 use clap::{Parser, Subcommand};
-use kalamos::{render, serve, watch};
+use kalamos::{
+    deploy::{self, DeployConfig, DeployStrategy},
+    render, serve, watch,
+};
 use log::info;
-use std::{path::PathBuf, thread};
+use serde::{Deserialize, Serialize};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    thread,
+};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Config {
+    deploy: Option<DeployConfig>,
+}
+
+#[derive(Debug)]
+pub enum ConfigError {
+    IoError(std::io::Error),
+    TomlError(toml::de::Error),
+}
+
+impl Config {
+    fn load(input_dir: &Path) -> Result<Option<Self>, ConfigError> {
+        let config_path = input_dir.join("config.toml");
+        if !config_path.exists() {
+            return Ok(None);
+        }
+        let config_str = fs::read_to_string(config_path).map_err(ConfigError::IoError)?;
+        let config: Config = toml::from_str(&config_str).map_err(ConfigError::TomlError)?;
+        Ok(Some(config))
+    }
+}
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -34,6 +65,16 @@ enum Commands {
         port: u16,
         /// the output directory.
         #[arg(default_value = DEFAULT_OUTPUT_DIR, short, long)]
+        output_dir: PathBuf,
+    },
+
+    #[command()]
+    Deploy {
+        /// The directory to generate the site from
+        #[arg(default_value = DEFAULT_INPUT_DIR)]
+        input_dir: PathBuf,
+        /// The directory of the generated site
+        #[arg(default_value = DEFAULT_OUTPUT_DIR)]
         output_dir: PathBuf,
     },
 
@@ -88,6 +129,31 @@ fn main() {
             });
             spawner.join().unwrap();
             watcher.join().unwrap();
+        }
+        Commands::Deploy {
+            input_dir,
+            output_dir,
+        } => {
+            let config = Config::load(&input_dir).unwrap_or_else(|e| {
+                panic!("Error loading config: {:?}", e);
+            });
+            if let Some(config) = config {
+                if let Some(deploy_config) = config.deploy {
+                    match deploy_config.strategy {
+                        DeployStrategy::S3AndCloudfront => {
+                            deploy::deploy_to_s3_and_cloudfront(
+                                &input_dir,
+                                &output_dir,
+                                &deploy_config.bucket,
+                            );
+                        }
+                    }
+                } else {
+                    println!("No deploy config found");
+                }
+            } else {
+                println!("No config file found");
+            }
         }
         Commands::New { name, template } => {
             info!("New site: {:?}, template: {:?}", name, template);

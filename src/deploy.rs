@@ -75,7 +75,13 @@ pub async fn deploy(
     input_dir: &Path,
     output_dir: &Path,
     deploy_config: &Option<DeployConfig>,
+    skip_generate: bool,
 ) -> Result<(), Error> {
+    if !skip_generate {
+        info!("rendering site");
+        render::render_dir(input_dir, output_dir).map_err(Error::RenderError)?;
+        info!("rendering site complete\n");
+    }
     if let Some(deploy_config) = deploy_config {
         match deploy_config.strategy {
             DeployStrategy::S3AndCloudfront => {

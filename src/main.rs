@@ -49,6 +49,9 @@ enum Commands {
         /// The directory of the generated site
         #[arg(default_value = DEFAULT_OUTPUT_DIR)]
         output_dir: PathBuf,
+        /// If this is true, then the site will not be generated before deploying
+        #[arg(short, long, default_value_t = false)]
+        skip_generate: bool,
     },
 
     /// Generate a new static site.
@@ -107,14 +110,20 @@ async fn main() {
         Commands::Deploy {
             input_dir,
             output_dir,
+            skip_generate,
         } => {
             let config = Config::load(&input_dir).unwrap_or_else(|e| {
                 panic!("Error loading config: {:?}", e);
             });
             if let Some(config) = config {
-                deploy::deploy(&input_dir, &output_dir, &config.deploy.map(|c| c.into()))
-                    .await
-                    .unwrap_or_else(|e| panic!("Error deploying: {:?}", e));
+                deploy::deploy(
+                    &input_dir,
+                    &output_dir,
+                    &config.deploy.map(|c| c.into()),
+                    skip_generate,
+                )
+                .await
+                .unwrap_or_else(|e| panic!("Error deploying: {:?}", e));
             } else {
                 println!("No config file found");
             }

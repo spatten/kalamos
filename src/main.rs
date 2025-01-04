@@ -1,5 +1,9 @@
 use clap::{Parser, Subcommand};
-use kalamos::{render, serve, watch};
+use kalamos::{
+    config::Config,
+    deploy::{self},
+    render, serve, watch,
+};
 use log::info;
 use std::{path::PathBuf, thread};
 
@@ -37,6 +41,16 @@ enum Commands {
         output_dir: PathBuf,
     },
 
+    #[command()]
+    Deploy {
+        /// The directory to generate the site from
+        #[arg(default_value = DEFAULT_INPUT_DIR)]
+        input_dir: PathBuf,
+        /// The directory of the generated site
+        #[arg(default_value = DEFAULT_OUTPUT_DIR)]
+        output_dir: PathBuf,
+    },
+
     /// Generate a new static site.
     #[command(arg_required_else_help = true)]
     New {
@@ -51,7 +65,8 @@ const DEFAULT_OUTPUT_DIR: &str = "./site";
 const DEFAULT_INPUT_DIR: &str = ".";
 const DEFAULT_PORT: u16 = 7878;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::init();
     let args = Cli::parse();
     match args.command {
@@ -88,6 +103,21 @@ fn main() {
             });
             spawner.join().unwrap();
             watcher.join().unwrap();
+        }
+        Commands::Deploy {
+            input_dir,
+            output_dir,
+        } => {
+            let config = Config::load(&input_dir).unwrap_or_else(|e| {
+                panic!("Error loading config: {:?}", e);
+            });
+            if let Some(config) = config {
+                deploy::deploy(&input_dir, &output_dir, &config.deploy.map(|c| c.into()))
+                    .await
+                    .unwrap_or_else(|e| panic!("Error deploying: {:?}", e));
+            } else {
+                println!("No config file found");
+            }
         }
         Commands::New { name, template } => {
             info!("New site: {:?}, template: {:?}", name, template);

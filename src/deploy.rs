@@ -44,6 +44,18 @@ pub enum Error {
     RenderError(render::Error),
     #[error("s3 error: {0:?}")]
     S3Error(AwsError),
+    #[error("no region")]
+    NoRegion,
+    #[error("read file error: {0:?}")]
+    ReadFile(std::io::Error),
+    #[error("strip prefix error: {0:?}")]
+    StripPrefixError(std::path::StripPrefixError),
+    #[error("generate key error: {0:?}")]
+    GenerateKey(std::path::PathBuf),
+    #[error("no distribution list")]
+    NoDistributionList,
+    #[error("cloudfront error: {0:?}")]
+    CloudfrontError(AwsError),
 }
 
 #[derive(Debug)]
@@ -92,26 +104,34 @@ pub async fn deploy_to_s3_and_cloudfront(
         .send()
         .await
         .map_err(|e| Error::S3Error(AwsError::new(e.to_string())))?;
-    let region = response.bucket_region().unwrap();
+    let region = response.bucket_region().ok_or(Error::NoRegion)?;
     println!("\n\n{:?}", region);
 
     // Upload the files to the bucket
-    upload_site_to_s3(output_dir, bucket, s3_client).await;
+    upload_site_to_s3(output_dir, bucket, s3_client).await?;
     // Get the distribution for the bucket and invalidate the cache
     let cloudfront_client = aws_sdk_cloudfront::Client::new(&config);
-    invalidate_cloudfront_cache(bucket, region, &cloudfront_client).await;
+    invalidate_cloudfront_cache(bucket, region, &cloudfront_client).await?;
     Ok(())
 }
 
-async fn upload_site_to_s3(site_dir: &Path, bucket_name: &str, s3_client: aws_sdk_s3::Client) {
+async fn upload_site_to_s3(
+    site_dir: &Path,
+    bucket_name: &str,
+    s3_client: aws_sdk_s3::Client,
+) -> Result<(), Error> {
     let files = WalkDir::new(site_dir)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_file());
     for file in files {
         let file_path = file.path();
-        let file_content = fs::read(file_path).unwrap();
-        let key = file_path.strip_prefix(site_dir).unwrap().to_str().unwrap();
+        let file_content = fs::read(file_path).map_err(Error::ReadFile)?;
+        let key = file_path
+            .strip_prefix(site_dir)
+            .map_err(Error::StripPrefixError)?
+            .to_str()
+            .ok_or(Error::GenerateKey(file_path.to_path_buf()))?;
         let mime_type = mime_guess::from_path(key).first_or_text_plain();
         println!(
             "Uploading path: {:?}, key: {}, mime_type: {}",
@@ -128,17 +148,23 @@ async fn upload_site_to_s3(site_dir: &Path, bucket_name: &str, s3_client: aws_sd
             .content_type(mime_type.essence_str())
             .send()
             .await
-            .unwrap();
+            .map_err(|e| Error::S3Error(AwsError::new(e.to_string())))?;
     }
+    Ok(())
 }
 
 async fn invalidate_cloudfront_cache(
     bucket_name: &str,
     region: &str,
     cloudfront_client: &aws_sdk_cloudfront::Client,
-) {
+) -> Result<(), Error> {
     let response = cloudfront_client.list_distributions().send().await;
-    let distributions = response.unwrap().distribution_list.unwrap().items.unwrap();
+    let distributions = response
+        .map_err(|e| Error::CloudfrontError(AwsError::new(e.to_string())))?
+        .distribution_list
+        .ok_or(Error::NoDistributionList)?
+        .items
+        .ok_or(Error::NoDistributionList)?;
     let website_origin = format!("{}.s3-website-{}.amazonaws.com", &bucket_name, &region);
     let distribution = distributions.iter().find(|d| match d.origins() {
         Some(origins) => origins
@@ -148,21 +174,26 @@ async fn invalidate_cloudfront_cache(
             .any(|o| o.domain_name == website_origin),
         None => false,
     });
-    let distribution_id = distribution.map(|d| d.clone().id);
+    let distribution_id = distribution.ok_or(Error::NoDistributionList)?.clone().id;
     println!("\n\ndistribution ID: {:?}", distribution_id);
-    let invalidation_paths = Paths::builder().items("/*").quantity(1).build().unwrap();
+    let invalidation_paths = Paths::builder()
+        .items("/*")
+        .quantity(1)
+        .build()
+        .expect("invalidation paths");
     let now = Utc::now();
     let timestamp = format!("{}", now.timestamp_millis());
     let invalidation_batch = InvalidationBatch::builder()
         .paths(invalidation_paths)
         .caller_reference(timestamp)
         .build()
-        .unwrap();
+        .expect("invalidation batch");
     let invalidate_request = cloudfront_client
         .create_invalidation()
-        .distribution_id(distribution_id.unwrap())
+        .distribution_id(distribution_id)
         .invalidation_batch(invalidation_batch)
         .send()
         .await;
     println!("{:?}", invalidate_request);
+    Ok(())
 }

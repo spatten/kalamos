@@ -65,7 +65,8 @@ const DEFAULT_OUTPUT_DIR: &str = "./site";
 const DEFAULT_INPUT_DIR: &str = ".";
 const DEFAULT_PORT: u16 = 7878;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::init();
     let args = Cli::parse();
     match args.command {
@@ -111,7 +112,9 @@ fn main() {
                 panic!("Error loading config: {:?}", e);
             });
             if let Some(config) = config {
-                deploy::deploy(&input_dir, &output_dir, &config.deploy.map(|c| c.into()));
+                deploy::deploy(&input_dir, &output_dir, &config.deploy.map(|c| c.into()))
+                    .await
+                    .unwrap_or_else(|e| panic!("Error deploying: {:?}", e));
             } else {
                 println!("No config file found");
             }

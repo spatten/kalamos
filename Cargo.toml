@@ -21,6 +21,10 @@ tera = "1.20.0"
 thiserror = "2.0.9"
 toml = { version = "0.8.19", features = ["parse"] }
 walkdir = "2.5.0"
+aws-config = { version = "1.5.13", features = ["behavior-version-latest"] }
+aws-sdk-cloudfront = "1.59.0"
+aws-sdk-s3 = "1.67.0"
+tokio = { version = "1.42.0", features = ["full"] }
 
 [dev-dependencies]
 binaryornot = "1.0.0"

@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{collections::HashSet, fs, path::Path};
 
 use aws_sdk_cloudfront::types::{InvalidationBatch, Paths};
 use aws_sdk_s3::{primitives::ByteStream, types::ObjectCannedAcl};
@@ -124,6 +124,7 @@ async fn upload_site_to_s3(
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_file());
+    let mut uploaded_files = HashSet::new();
     for file in files {
         let file_path = file.path();
         let file_content = fs::read(file_path).map_err(Error::ReadFile)?;
@@ -139,6 +140,7 @@ async fn upload_site_to_s3(
             key,
             mime_type.essence_str()
         );
+        uploaded_files.insert(key.to_string());
         s3_client
             .put_object()
             .bucket(bucket_name)
@@ -146,6 +148,40 @@ async fn upload_site_to_s3(
             .body(ByteStream::from(file_content))
             .acl(ObjectCannedAcl::PublicRead)
             .content_type(mime_type.essence_str())
+            .send()
+            .await
+            .map_err(|e| Error::S3Error(AwsError::new(e.to_string())))?;
+    }
+
+    // Now remove files that should no longer exist in S3
+    // These are files that were previously uploaded but are no longer in the local directory
+    let files_on_s3_paginator = s3_client
+        .list_objects_v2()
+        .bucket(bucket_name)
+        .into_paginator()
+        .send();
+    let files_on_s3_iter = files_on_s3_paginator
+        .collect::<Result<Vec<_>, _>>()
+        .await
+        .map_err(|e| Error::S3Error(AwsError::new(e.to_string())))?;
+    let files_on_s3 = files_on_s3_iter
+        .into_iter()
+        .flat_map(|e| {
+            e.contents()
+                .iter()
+                .filter_map(|obj| obj.key().map(|k| k.to_string()))
+                .collect::<Vec<_>>()
+        })
+        .collect::<HashSet<_>>();
+    println!("files on s3: {:?}", files_on_s3);
+    println!("uploaded files: {:?}", uploaded_files);
+    let files_to_remove = files_on_s3.difference(&uploaded_files);
+    println!("files to remove: {:?}", files_to_remove);
+    for key in files_to_remove {
+        s3_client
+            .delete_object()
+            .bucket(bucket_name)
+            .key(key)
             .send()
             .await
             .map_err(|e| Error::S3Error(AwsError::new(e.to_string())))?;

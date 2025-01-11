@@ -2,6 +2,14 @@ use std::{fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 
+/// The configuration for the site.
+/// Currently, only the deploy section is used.
+/// An example config.toml would look like this:
+/// ```toml
+/// [deploy]
+/// strategy = "s3_and_cloudfront" // The deploy strategy to use. Currently, only s3_and_cloudfront is supported.
+/// bucket = "your.domain.com" // This is the name of the bucket in s3 and also the domain name that you want to use for your site.
+/// ```
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub deploy: Option<DeployConfig>,

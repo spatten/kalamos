@@ -119,16 +119,16 @@ pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
         page.render(&templates, output_dir, &posts)?;
     }
 
-    // copy all files in the direct_copy directory
-    let direct_copy_path = root_dir.join("direct_copy");
-    for entry in WalkDir::new(&direct_copy_path)
+    // copy all files in the static directory
+    let static_path = root_dir.join("static");
+    for entry in WalkDir::new(&static_path)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
     {
         let p = entry.path();
         let stripped = p
-            .strip_prefix(&direct_copy_path)
+            .strip_prefix(&static_path)
             .map_err(|e| Error::StripPrefix(p.to_path_buf(), e))?;
         let output_path = output_dir.join(stripped);
         let output_dir = output_path

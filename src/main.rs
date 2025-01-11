@@ -90,7 +90,11 @@ async fn main() {
             info!("Serving {:?} on port {}...", input_dir, port);
             let output_dir_clone = output_dir.clone();
 
-            let spawner = thread::spawn(move || {
+            // Render the site before serving
+            render::render_dir(&input_dir, &output_dir).unwrap_or_else(|e| {
+                panic!("Error rendering posts and pages: {}", e);
+            });
+            let server = thread::spawn(move || {
                 serve::serve(&output_dir_clone, port).unwrap_or_else(|e| {
                     panic!("Error serving: {:?}", e);
                 });
@@ -104,7 +108,7 @@ async fn main() {
                     panic!("Error watching: {:?}", e);
                 });
             });
-            spawner.join().unwrap();
+            server.join().unwrap();
             watcher.join().unwrap();
         }
         Commands::Deploy {

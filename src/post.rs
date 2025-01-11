@@ -28,6 +28,9 @@ pub struct Post {
     pub excerpt: String,
     /// The date the post was published
     pub date: NaiveDate,
+    /// The date the post was published, as a string in the format YYYY-MM-DD
+    pub date_str: String,
+    /// The date the post was published as a DateStruct
     pub date_struct: DateStruct,
     /// The url of the post. This is output_path, but with a leading / and an extension of html
     /// /2024/12/28/my-post.html
@@ -161,6 +164,7 @@ impl Render for Post {
         context.insert("path", &self.output_path);
         context.insert("url", &self.url);
         context.insert("date", &self.date);
+        context.insert("date_str", &self.date_str);
         context.insert("date_struct", &date_struct);
         context.insert("body", &self.content);
         context.insert("context", &self.excerpt);
@@ -190,6 +194,7 @@ impl Render for Post {
             content: parsed.body.clone(),
             excerpt: parsed.excerpt.unwrap_or(parsed.body),
             date: post_file.date,
+            date_str: post_file.date.format("%Y-%m-%d").to_string(),
             date_struct: DateStruct::from(post_file.date),
             url: post_file.url.clone(),
             slug: post_file.slug.clone(),

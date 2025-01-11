@@ -202,7 +202,7 @@ impl Render for Page {
         context.insert("body", &self.content);
         context.insert("excerpt", &self.excerpt);
         context.insert("slug", &self.slug);
-        context.insert("current_date", &Utc::now().date_naive());
+        context.insert("current_date", &Utc::now().naive_local());
         context
     }
 

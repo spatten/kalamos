@@ -63,8 +63,10 @@ impl TryFrom<PathBuf> for PostFile {
         if !Post::VALID_EXTENSIONS.contains(&extension) {
             return Err(RenderError::Path(path.to_path_buf()));
         }
-        let url = PathBuf::from(format!("/{}/{}/{}.html", date.year(), date.month(), slug));
-        let output_path = PathBuf::from(format!("{}/{}/{}.html", date.year(), date.month(), slug));
+        let date_path = date.format("%Y/%m");
+        // E.g. /2024/12/my-post.html
+        let url = PathBuf::from(format!("/{}/{}.html", date_path, slug));
+        let output_path = PathBuf::from(format!("{}/{}.html", date_path, slug));
         Ok(Self {
             date,
             slug,

@@ -66,7 +66,7 @@ enum Commands {
 
 const DEFAULT_OUTPUT_DIR: &str = "./site";
 const DEFAULT_INPUT_DIR: &str = ".";
-const DEFAULT_PORT: u16 = 7878;
+const DEFAULT_PORT: u16 = 9999;
 
 #[tokio::main]
 async fn main() {

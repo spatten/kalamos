@@ -1589,6 +1589,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "include_dir_as_map"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba62aea359e943591293b97abd4e0144556d5f9af0ec9d850b040da647f1e82b"
+dependencies = [
+ "proc_include_dir_as_map",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1688,6 +1697,7 @@ dependencies = [
  "chrono",
  "clap",
  "env_logger",
+ "include_dir_as_map",
  "insta",
  "log 0.4.22",
  "mime_guess",
@@ -2161,6 +2171,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37d3544b3f2748c54e147655edb5025752e2303145b5aefb3c3ea2c78b973bb0"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "proc_include_dir_as_map"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "298b8ed9c8d9e4cdd265ad318fe85cafe353119686676af4053f31e3f4709a8a"
+dependencies = [
+ "proc-macro2",
+ "quote",
 ]
 
 [[package]]

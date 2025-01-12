@@ -1,0 +1,27 @@
++++
+title = "Atom Feed"
++++
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+ <title>Scott Patten's Blog</title>
+ <link href="http://scottpatten.ca/atom.xml" rel="self"/>
+ <link href="http://scottpatten.ca/blog.html"/>
+ <updated>{{ current_date |date(format="%Y-%m-%dT%H:%M:%S%z") }}</updated>
+ <id>http://scottpatten.ca/</id>
+ <author>
+   <name>Scott Patten</name>
+   <email>scott@scottpatten.ca</email>
+ </author>
+
+ {% for post in posts %}
+ <entry>
+   <title>{{ post.title }}</title>
+   <link href="http://scottpatten.ca{{ post.url | escape_xml | safe }}"/>
+   <updated>{{ post.date_str | date(format="%Y-%m-%dT%H:%M:%S%z") }}</updated>
+   <id>http://scottpatten.ca{{ post.url | escape_xml | safe }}</id>
+   <content type="html">{{ post.content | escape_xml | safe }}</content>
+ </entry>
+ {% endfor %}
+
+</feed>

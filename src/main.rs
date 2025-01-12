@@ -1,11 +1,16 @@
 use clap::{Parser, Subcommand};
+use include_dir_as_map::{include_dir_as_map, DirMap};
 use kalamos::{
     config::Config,
     deploy::{self},
     render, serve, watch,
 };
 use log::info;
-use std::{path::PathBuf, thread};
+use std::fs;
+use std::{
+    path::{Path, PathBuf},
+    thread,
+};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -57,10 +62,11 @@ enum Commands {
     /// Generate a new static site.
     #[command(arg_required_else_help = true)]
     New {
-        /// the name of the new site
-        name: String,
-        /// The template to use for the new site
+        /// The template to use for the new site. Currently the only template available is "simple-blog"
+        #[arg(short, long, default_value = "simple-blog")]
         template: String,
+        /// The output directory. This will be created if it doesn't exist.
+        output_dir: PathBuf,
     },
 }
 
@@ -132,8 +138,24 @@ async fn main() {
                 println!("No config file found");
             }
         }
-        Commands::New { name, template } => {
-            info!("New site: {:?}, template: {:?}", name, template);
+        Commands::New {
+            output_dir,
+            template,
+        } => {
+            let examples: DirMap = include_dir_as_map!("$CARGO_MANIFEST_DIR/examples");
+            info!("New site: {:?}, template: {:?}", output_dir, template);
+            // let template_dir = examples.get(&template).unwrap();
+            // println!("{:?}", template_dir);
+            for (file, contents) in examples {
+                let stripped = Path::new(&file)
+                    .strip_prefix(&template)
+                    .map_err(|e| render::Error::StripPrefix(Path::new(&file).to_path_buf(), e))
+                    .unwrap_or_else(|e| panic!("Error while stripping prefix: {}", e));
+                let output_path = output_dir.join(stripped);
+                fs::create_dir_all(output_path.parent().unwrap()).unwrap();
+                info!("Writing {:?} to {:?}", stripped, output_path);
+                fs::write(output_path, contents).unwrap();
+            }
         }
     }
 }

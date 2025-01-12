@@ -2,10 +2,13 @@ use clap::{Parser, Subcommand};
 use kalamos::{
     config::Config,
     deploy::{self},
-    render, serve, watch,
+    render, serve, util, watch,
 };
 use log::info;
-use std::{path::PathBuf, thread};
+use std::{
+    path::{Path, PathBuf},
+    thread,
+};
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -57,10 +60,11 @@ enum Commands {
     /// Generate a new static site.
     #[command(arg_required_else_help = true)]
     New {
-        /// the name of the new site
-        name: String,
-        /// The template to use for the new site
+        /// The template to use for the new site. Currently the only template available is "simple-blog"
+        #[arg(short, long, default_value = "simple-blog")]
         template: String,
+        /// The output directory. This will be created if it doesn't exist.
+        output_dir: PathBuf,
     },
 }
 
@@ -132,8 +136,13 @@ async fn main() {
                 println!("No config file found");
             }
         }
-        Commands::New { name, template } => {
-            info!("New site: {:?}, template: {:?}", name, template);
+        Commands::New {
+            output_dir,
+            template,
+        } => {
+            info!("New site: {:?}, template: {:?}", output_dir, template);
+            util::copy_dir(Path::new(&format!("examples/{}", template)), &output_dir)
+                .unwrap_or_else(|e| panic!("Error copying template: {:?}", e));
         }
     }
 }

@@ -67,8 +67,8 @@ where
 pub enum Error {
     #[error("tera error: {0}")]
     Tera(tera::Error),
-    #[error("path error: {0}")]
-    Path(PathBuf),
+    #[error("path error: {0}: {1}")]
+    Path(PathBuf, String),
     #[error("read error: {0}")]
     ReadFile(std::io::Error),
     #[error("markdown error: {0}")]
@@ -94,9 +94,10 @@ pub enum Error {
 /// Eg. load_templates("/path/to/project") would load all the templates in /path/to/project/layouts/*.html
 pub fn load_templates(path: &Path) -> Result<Tera, Error> {
     let layout_path = path.join("layouts/*.html");
-    let layout_path = layout_path
-        .to_str()
-        .ok_or(Error::Path(path.to_path_buf()))?;
+    let layout_path = layout_path.to_str().ok_or(Error::Path(
+        path.to_path_buf(),
+        "path to templates not found".to_string(),
+    ))?;
     Tera::new(layout_path).map_err(Error::Tera)
 }
 

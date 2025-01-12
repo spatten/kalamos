@@ -62,9 +62,12 @@ impl TryFrom<PathBuf> for PageFile {
         let slug = path
             .with_extension("")
             .file_name()
-            .ok_or(RenderError::Path(path.clone()))?
+            .ok_or(RenderError::Path(path.clone(), "file_name".to_string()))?
             .to_str()
-            .ok_or(RenderError::Path(path.clone()))?
+            .ok_or(RenderError::Path(
+                path.clone(),
+                "to_str after getting file_name".to_string(),
+            ))?
             .to_string();
         let extension = &path
             .extension()
@@ -72,7 +75,10 @@ impl TryFrom<PathBuf> for PageFile {
             .to_str()
             .unwrap_or_default();
         if !Page::VALID_EXTENSIONS.contains(extension) {
-            return Err(RenderError::Path(path.to_path_buf()));
+            return Err(RenderError::Path(
+                path.to_path_buf(),
+                "not a valid extension".to_string(),
+            ));
         }
         let url_extension = if Page::extension_is_markdown(extension) {
             "html"
@@ -233,9 +239,15 @@ impl Render for Page {
             let template = self
                 .input_path
                 .file_name()
-                .ok_or(RenderError::Path(self.input_path.to_path_buf()))?
+                .ok_or(RenderError::Path(
+                    self.input_path.to_path_buf(),
+                    "getting file_name".to_string(),
+                ))?
                 .to_str()
-                .ok_or(RenderError::Path(self.input_path.to_path_buf()))?;
+                .ok_or(RenderError::Path(
+                    self.input_path.to_path_buf(),
+                    "to_str after getting file_name".to_string(),
+                ))?;
             let mut templates = templates.clone();
             templates
                 .add_raw_template(template, &self.content)

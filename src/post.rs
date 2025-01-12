@@ -61,7 +61,10 @@ impl TryFrom<PathBuf> for PostFile {
             .to_str()
             .unwrap_or_default();
         if !Post::VALID_EXTENSIONS.contains(&extension) {
-            return Err(RenderError::Path(path.to_path_buf()));
+            return Err(RenderError::Path(
+                path.to_path_buf(),
+                "not a valid extension".to_string(),
+            ));
         }
         let date_path = date.format("%Y/%m");
         // E.g. /2024/12/my-post.html

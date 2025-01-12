@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>scottpatten.ca | {{ title }}</title>
+    <meta name="author" content="Scott Patten" />
+    <link href="http://feeds.feedburner.com/scottpatten.ca" rel="alternate" title="Scott Patten" type="application/atom+xml" />
+    <link rel="stylesheet" type="text/css" media="all" href="/assets/stylesheets/syntax.css" />
+    <link rel="stylesheet" type="text/css" media="all" href="/assets/stylesheets/reset.css" />
+    <link rel="stylesheet" type="text/css" media="all" href="/assets/stylesheets/text.css" />
+    <link rel="stylesheet" type="text/css" media="all" href="/assets/stylesheets/960.css" />
+    <link rel="stylesheet" type="text/css" media="all"
+    href="/assets/stylesheets/site.css" />
+
+  </head>
+  <body id="{{ slug }}">
+
+
+    <div class="container_16">
+
+      <div id="header" class="grid_16">
+        <h1 id='blog-title' class='grid_12 alpha'><a href="/">scottpatten.ca</a></h1>
+        <ul id='nav'>
+          <li><a href='/'>Home</a></li>
+          <li><a href='/about.html'>About Me</a></li>
+        </ul>
+
+      </div>
+
+      <div class="grid_12" id="main">
+        <div id='content-wrapper'>
+          <h1 id='post-title'>{{ title }}</h1>
+          {% if date %}
+            <p class='published-date'>published {{ date }}</p>
+          {% endif %}
+          {% block content %}{{ body | safe }}{% endblock content %}
+        </div>
+
+      </div>
+
+      <div id='sidebar' class='grid_4'>
+
+        <div>
+          <p>
+            <strong>Scott Patten</strong><br />
+            Software dev at <a href="https://fossa.com">FOSSA</a><br />
+            Email: <a href="mailto:scott@scottpatten.ca">scott@scottpatten.ca</a><br />
+          </p>
+        </div>
+        <div class="rss">
+            <img src="/assets/images/feed-icon-14x14.png" alt="Subscribe to
+            RSS Feed"/>
+            <a href="https://feeds.feedburner.com/scottpatten.ca">Subscribe</a>
+        </div>
+        <div id='archive'>
+          <h1>Posts</h1>
+          <ul>
+            {% set map = posts | group_by(attribute="date_struct.year") %}
+            {% set_global years = [] %}
+            {% for year, ignored in map %}
+                {% set_global years = years | concat(with=year) %}
+            {% endfor %}
+            {% for year in years | reverse %}
+              {{ year }}
+              <ul>
+                {% for post in map[year] %}
+                  <li><a href='{{post.url}}'>{{ post.title }}</a></li>
+                {% endfor %}
+              </ul>
+            {% endfor %}
+          </ul>
+        </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

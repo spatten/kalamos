@@ -1,0 +1,13 @@
++++
+title = "Recent Posts"
++++
+{% extends "default.html" %}
+{% block content %}
+{% for post in posts | slice(end=8) %}
+<h2><a href='{{ post.url }}'>{{ post.title }}</a></h2>
+<p class='published-date'>published {{ post.date }}</p>
+{{ post.excerpt | safe }}
+<a href='{{ post.url }}'>Read More</a>
+<hr />
+{% endfor %}
+{% endblock content %}

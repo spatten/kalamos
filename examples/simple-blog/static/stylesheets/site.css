@@ -1,0 +1,123 @@
+::-moz-selection{ background: #FF9; color:#222; text-shadow: none; }
+::selection { background:#FF9; color:#222; text-shadow: none; }
+::-webkit-selection { background:#FF9; color:#222; text-shadow: none; }
+
+/* header */
+
+#header {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  border-bottom: thin solid grey;
+  padding-left: 10px;
+  position: relative;
+}
+
+#header h1#blog-title {
+  font-size: 3.5em;
+  font-weight: 400;
+  margin-bottom: 0px;
+}
+
+#header h1#blog-title a {
+  text-decoration: none;
+  color: black;
+}
+
+#header ul#nav {
+   margin-bottom: 10px;
+   margin-left: 710px;
+   position: absolute;
+   bottom: 0px;
+}
+
+#header ul#nav li{
+  list-style:none;
+  float: left;
+  margin-left: 20px;
+  font-weight: bold;
+}
+
+#header ul#nav li:first-child{
+  margin-left: 0px;
+}
+
+#header ul#nav li a {
+  text-decoration: none;
+  color: black;
+}
+
+/* content */
+
+#main #content-wrapper {
+  padding-left: 10px;
+  padding-right: 20px;
+}
+
+#content-wrapper .published-date {
+  color: grey;
+  margin-top: -20px;
+  font-size: 90%;
+}
+
+
+/* sidebar */
+#archive > ul {
+  margin-left: 0px;
+}
+
+#archive > ul > li {
+  list-style: none;
+  margin-left: 0px;
+}
+
+#thes3cookbook-embed {
+  margin-top: 20px;
+  width: 100%;
+}
+
+/* general styles */
+pre {
+ width: 700px;
+ white-space: pre-wrap;       /* css-3 */
+ white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+ white-space: -pre-wrap;      /* Opera 4-6 */
+ white-space: -o-pre-wrap;    /* Opera 7 */
+ word-wrap: break-word;       /* Internet Explorer 5.5+ */
+}
+
+a:link, a:visited {
+  color: #3671A1;
+}
+
+blockquote {
+  padding-left: 20px;
+}
+
+#content-wrapper p {
+  font-size: 120%;
+}
+
+#content-wrapper li {
+  font-size: 110%;
+}
+
+#content-wrapper h2 {
+  line-height: 1.2em;
+}
+
+#content-wrapper h2 a {
+  text-decoration: none;
+}
+
+#about #content-wrapper img {
+  width: 200px;
+  float: left;
+  margin: 5px 20px 0px 0px;
+  border-radius: 10px;
+  border: thick solid gray;
+}
+
+#content-wrapper .text-link {
+  font-size: 0.8rem;
+  color: gray;
+}

@@ -1,14 +1,9 @@
 +++
 title = "About Me"
 +++
-![](/assets/images/scott-headshot.png)
 
-Hi, I'm Scott Patten.  I'm a software developer based in Vancouver.
+Hi, I'm [Kalamos](https://github.com/spatten/kalamos).  I'm a static site generator!
 
-I work at [FOSSA](https://fossa.com), where we help companies use open source software safely and successfully.
+This is an example of a page written in Markdown. It has a title in the metadata block at the top of the page.
 
-In the past, I was a co-founder of [Leanpub](https://leanpub.com).
-
-You can email me at [scott@scottpatten.ca](mailto:scott@scottpatten.ca).
-
-My code is all hosted on GitHub at [github.com/spatten](http://github.com/spatten).
+You can also write pages in HTML. For example, the [homepage](/) of this site is found at index.html.

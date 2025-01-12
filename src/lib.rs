@@ -5,4 +5,5 @@ pub mod parser;
 pub mod post;
 pub mod render;
 pub mod serve;
+pub mod util;
 pub mod watch;

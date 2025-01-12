@@ -8,6 +8,7 @@ use walkdir::WalkDir;
 use crate::page::Page;
 use crate::parser;
 use crate::post::Post;
+use crate::util;
 
 pub trait RenderableFromPath: TryFrom<PathBuf, Error = Error> + std::fmt::Debug {
     fn url(&self) -> PathBuf;
@@ -121,21 +122,6 @@ pub fn render_dir(root_dir: &Path, output_dir: &Path) -> Result<(), Error> {
 
     // copy all files in the static directory
     let static_path = root_dir.join("static");
-    for entry in WalkDir::new(&static_path)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-    {
-        let p = entry.path();
-        let stripped = p
-            .strip_prefix(&static_path)
-            .map_err(|e| Error::StripPrefix(p.to_path_buf(), e))?;
-        let output_path = output_dir.join(stripped);
-        let output_dir = output_path
-            .parent()
-            .ok_or(Error::Path(output_path.to_path_buf()))?;
-        fs::create_dir_all(output_dir).map_err(Error::CopyDir)?;
-        fs::copy(p, output_path).map_err(Error::CopyDir)?;
-    }
+    util::copy_dir(&static_path, output_dir)?;
     Ok(())
 }

@@ -16,6 +16,8 @@ use std::{
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+    #[arg(short, long, default_value_t = log::Level::Info)]
+    log_level: log::Level,
 }
 
 #[derive(Debug, Subcommand)]
@@ -76,8 +78,8 @@ const DEFAULT_PORT: u16 = 9999;
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
     let args = Cli::parse();
+    simple_logger::init_with_level(args.log_level).expect("Failed to initialize logger");
     match args.command {
         Commands::Generate {
             input_dir,

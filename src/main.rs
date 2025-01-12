@@ -16,6 +16,8 @@ use std::{
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+    /// The log level to use. Defaults to info. Can be any of the following: error, warn, info, debug, trace.
+    /// The log-level is case insensitive.
     #[arg(short, long, default_value_t = log::Level::Info)]
     log_level: log::Level,
 }
@@ -23,7 +25,6 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     /// Generate the static site.
-    /// To see logs, run with `RUST_LOG=info kalamos generate`
     Generate {
         /// the input directory. Defaults to the current directory.
         #[arg(default_value = DEFAULT_INPUT_DIR, short, long)]
@@ -34,7 +35,6 @@ enum Commands {
     },
 
     /// Serve a static site and watch for changes to the input directory.
-    /// To see logs, run with `RUST_LOG=info kalamos serve`
     #[command()]
     Serve {
         /// The directory to serve
